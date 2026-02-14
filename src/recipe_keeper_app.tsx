@@ -2377,19 +2377,20 @@ const RecipeApp = () => {
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 pb-24">
-        <div className="max-w-5xl mx-auto p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-800">Wochenplaner</h1>
+        <div className="max-w-5xl mx-auto p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 sm:mb-6">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Wochenplaner</h1>
             <button
               onClick={addWeekToShoppingList}
-              className="px-4 py-2 bg-green-500 text-white rounded-xl font-medium active:scale-95 flex items-center gap-2"
+              className="w-full sm:w-auto px-4 py-3 sm:py-2 bg-green-500 text-white rounded-xl font-medium active:scale-95 flex items-center justify-center gap-2 min-h-[44px]"
             >
               <ShoppingCart className="w-5 h-5" />
-              Zur Einkaufsliste
+              <span>Zur Einkaufsliste</span>
             </button>
           </div>
 
-          <div className="bg-white rounded-3xl p-6 shadow-lg overflow-x-auto">
+          {/* Desktop: Table View */}
+          <div className="hidden md:block bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr>
@@ -2402,7 +2403,7 @@ const RecipeApp = () => {
                 </tr>
               </thead>
               <tbody>
-                {weekDays.map((date, dayIdx) => {
+                {weekDays.map((date) => {
                   const dayDate = new Date(date);
                   const dayName = dayDate.toLocaleDateString('de-DE', { weekday: 'short' });
                   const dayNumber = dayDate.getDate();
@@ -2425,7 +2426,7 @@ const RecipeApp = () => {
                                   <span className="font-medium text-sm text-gray-800">{recipe.title}</span>
                                   <button
                                     onClick={() => removeMealPlan(plan.id)}
-                                    className="text-red-500 hover:text-red-700"
+                                    className="text-red-500 hover:text-red-700 min-w-[32px] min-h-[32px] flex items-center justify-center"
                                   >
                                     <X className="w-4 h-4" />
                                   </button>
@@ -2435,7 +2436,7 @@ const RecipeApp = () => {
                                     setSelectedRecipe(recipe);
                                     setView('detail');
                                   }}
-                                  className="text-xs text-orange-600 hover:underline"
+                                  className="text-xs text-orange-600 hover:underline min-h-[32px]"
                                 >
                                   Details →
                                 </button>
@@ -2447,7 +2448,7 @@ const RecipeApp = () => {
                                   setSelectedMealTypeForMealPlan(mealType);
                                   setShowRecipeSelector(true);
                                 }}
-                                className="w-full h-16 border-2 border-dashed border-gray-300 rounded-lg text-gray-400 hover:border-orange-400 hover:text-orange-400 transition text-sm"
+                                className="w-full h-16 border-2 border-dashed border-gray-300 rounded-lg text-gray-400 hover:border-orange-400 hover:text-orange-400 transition text-sm min-h-[64px]"
                               >
                                 + Rezept
                               </button>
@@ -2462,8 +2463,84 @@ const RecipeApp = () => {
             </table>
           </div>
 
-          <div className="mt-6 bg-blue-50 rounded-xl p-4">
-            <p className="text-sm text-blue-800">
+          {/* Mobile: Card View */}
+          <div className="md:hidden space-y-4">
+            {weekDays.map((date) => {
+              const dayDate = new Date(date);
+              const dayName = dayDate.toLocaleDateString('de-DE', { weekday: 'long' });
+              const dayNumber = dayDate.getDate();
+              const month = dayDate.getMonth() + 1;
+              const isToday = date === new Date().toISOString().split('T')[0];
+              
+              return (
+                <div key={date} className="bg-white rounded-2xl p-4 shadow-lg">
+                  <div className={`flex items-center justify-between mb-4 pb-3 border-b-2 ${isToday ? 'border-orange-400' : 'border-gray-200'}`}>
+                    <div>
+                      <div className="font-bold text-lg text-gray-800">{dayName}</div>
+                      <div className="text-sm text-gray-500">{dayNumber}.{month}</div>
+                    </div>
+                    {isToday && (
+                      <span className="px-3 py-1 bg-orange-100 text-orange-600 rounded-full text-xs font-medium">
+                        Heute
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {mealTypes.map(mealType => {
+                      const plan = getMealPlanForDay(date, mealType);
+                      const recipe = plan ? getRecipeForPlan(plan) : null;
+                      
+                      return (
+                        <div key={mealType} className="border-2 border-gray-100 rounded-xl p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-bold text-gray-500 uppercase">{mealType}</span>
+                            {plan && (
+                              <button
+                                onClick={() => removeMealPlan(plan.id)}
+                                className="text-red-500 hover:text-red-700 min-w-[32px] min-h-[32px] flex items-center justify-center"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                          
+                          {plan && recipe ? (
+                            <div className="bg-orange-50 rounded-lg p-3 border-2 border-orange-200">
+                              <div className="font-medium text-sm text-gray-800 mb-2">{recipe.title}</div>
+                              <button
+                                onClick={() => {
+                                  setSelectedRecipe(recipe);
+                                  setView('detail');
+                                }}
+                                className="text-xs text-orange-600 hover:underline font-medium min-h-[32px]"
+                              >
+                                Details anzeigen →
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setSelectedDateForMealPlan(date);
+                                setSelectedMealTypeForMealPlan(mealType);
+                                setShowRecipeSelector(true);
+                              }}
+                              className="w-full py-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-400 hover:border-orange-400 hover:text-orange-400 transition text-sm font-medium min-h-[52px]"
+                            >
+                              + Rezept hinzufügen
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 sm:mt-6 bg-blue-50 rounded-xl p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-blue-800">
               <strong>Tipp:</strong> Klicke auf "+ Rezept" um ein Rezept für einen Tag und eine Mahlzeit hinzuzufügen. 
               Nutze "Zur Einkaufsliste" um alle Zutaten der Woche auf einmal hinzuzufügen.
             </p>
@@ -2472,21 +2549,21 @@ const RecipeApp = () => {
           {/* Recipe Selector Modal */}
           {showRecipeSelector && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+              <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-2xl w-full max-h-[85vh] sm:max-h-[80vh] overflow-y-auto">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-2xl font-bold text-gray-800">Rezept auswählen</h2>
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Rezept auswählen</h2>
                   <button
                     onClick={() => {
                       setShowRecipeSelector(false);
                       setSelectedDateForMealPlan(null);
                       setSelectedMealTypeForMealPlan(null);
                     }}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-gray-500 hover:text-gray-700 min-w-[44px] min-h-[44px] flex items-center justify-center"
                   >
                     <X className="w-6 h-6" />
                   </button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {recipes.map(recipe => (
                     <button
                       key={recipe.id}
@@ -2498,9 +2575,9 @@ const RecipeApp = () => {
                           setSelectedMealTypeForMealPlan(null);
                         }
                       }}
-                      className="text-left p-4 bg-gray-50 rounded-xl hover:bg-orange-50 transition border-2 border-transparent hover:border-orange-200"
+                      className="text-left p-4 bg-gray-50 rounded-xl hover:bg-orange-50 transition border-2 border-transparent hover:border-orange-200 min-h-[64px] flex flex-col justify-center"
                     >
-                      <div className="font-medium text-gray-800">{recipe.title}</div>
+                      <div className="font-medium text-base sm:text-sm text-gray-800">{recipe.title}</div>
                       {recipe.category && (
                         <div className="text-xs text-gray-500 mt-1">{recipe.category}</div>
                       )}
@@ -2508,7 +2585,7 @@ const RecipeApp = () => {
                   ))}
                 </div>
                 {recipes.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-gray-500 text-sm sm:text-base">
                     Keine Rezepte vorhanden. Erstelle zuerst ein Rezept!
                   </div>
                 )}
