@@ -101,6 +101,10 @@ export const scaleIngredients = (ingredients: string[] | Array<{ amount: string;
   });
 };
 
+// Safe string for search (never call toLowerCase on non-string)
+const safeSearchStr = (v: unknown): string =>
+  (v == null || v === '') ? '' : (typeof v === 'string' ? v : String(v)).toLowerCase();
+
 // Search recipes with multiple criteria
 export const searchRecipes = (
   recipes: Recipe[],
@@ -116,19 +120,27 @@ export const searchRecipes = (
   return recipes.filter(recipe => {
     // Search term (title, ingredients, tags)
     if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      const matchesTitle = recipe.title.toLowerCase().includes(term);
+      const term = safeSearchStr(searchTerm);
+      const matchesTitle = safeSearchStr(recipe?.title).includes(term);
       
-      // Handle both ingredient formats
-      const ingredientStrings = Array.isArray(recipe.ingredients[0]) && typeof recipe.ingredients[0] === 'object' && 'name' in recipe.ingredients[0]
-        ? (recipe.ingredients as Array<{ amount: string; unit: string; name: string }>).map(ing => `${ing.amount} ${ing.unit} ${ing.name}`)
-        : recipe.ingredients as string[];
+      // Normalize ingredients to string[] (handle both formats and bad data)
+      let ingredientStrings: string[] = [];
+      const raw = recipe?.ingredients;
+      if (Array.isArray(raw) && raw.length > 0) {
+        const first = raw[0];
+        const isObjFormat = first != null && typeof first === 'object' && 'name' in first;
+        ingredientStrings = isObjFormat
+          ? (raw as Array<{ amount?: unknown; unit?: unknown; name?: unknown }>).map(ing =>
+              [ing?.amount, ing?.unit, ing?.name].map(x => (x != null && typeof x === 'string' ? x : String(x ?? ''))).join(' ')
+            )
+          : raw.map(ing => (typeof ing === 'string' ? ing : String(ing ?? '')));
+      }
       
-      const matchesIngredients = ingredientStrings.some(ing => 
-        ing.toLowerCase().includes(term)
+      const matchesIngredients = ingredientStrings.some(ing =>
+        safeSearchStr(ing).includes(term)
       );
-      const matchesTags = recipe.tags?.some(tag => 
-        tag.toLowerCase().includes(term)
+      const matchesTags = Array.isArray(recipe?.tags) && recipe.tags.some(tag =>
+        safeSearchStr(tag).includes(term)
       );
       
       if (!matchesTitle && !matchesIngredients && !matchesTags) {
