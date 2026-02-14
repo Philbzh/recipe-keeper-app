@@ -766,12 +766,12 @@ const RecipeApp = () => {
   // Home View
   const HomeView = () => (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
-      <div className="max-w-4xl mx-auto p-4 pb-24">
-        <header className="mb-8 pt-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <ChefHat className="w-10 h-10 text-orange-600" />
-              <h1 className="text-3xl font-bold text-gray-800">Phils Rezepte</h1>
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 pb-24">
+        <header className="mb-6 sm:mb-8 pt-4 sm:pt-6">
+          <div className="flex items-center justify-between mb-4 sm:mb-6 gap-2">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <ChefHat className="w-8 h-8 sm:w-10 sm:h-10 text-orange-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Phils Rezepte</h1>
             </div>
 
             <div className="relative">
@@ -779,22 +779,22 @@ const RecipeApp = () => {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setShowUserMenu(!showUserMenu)}
-                    className="flex items-center gap-2 px-3 py-2 bg-white rounded-xl border-2 border-gray-200 text-gray-700 font-medium"
+                    className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 bg-white rounded-xl border-2 border-gray-200 text-gray-700 font-medium min-h-[44px]"
                   >
-                    <Users className="w-5 h-5" />
-                    <span className="text-sm">{user.email?.split('@')[0]}</span>
+                    <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="text-xs sm:text-sm hidden sm:inline">{user.email?.split('@')[0]}</span>
                   </button>
 
                   {showUserMenu && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border">
-                      <div className="p-3 text-sm text-gray-700">{user.email}</div>
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-50">
+                      <div className="p-3 text-xs sm:text-sm text-gray-700 break-all">{user.email}</div>
                       <div className="border-t" />
                       <button
                         onClick={() => {
                           setShowUserMenu(false);
                           signOut();
                         }}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                        className="w-full text-left px-3 py-3 hover:bg-gray-50 min-h-[44px] text-sm"
                       >
                         Abmelden
                       </button>
@@ -805,34 +805,34 @@ const RecipeApp = () => {
             </div>
           </div>
           
-          <div className="relative mb-4">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <div className="relative mb-3 sm:mb-4">
+            <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
             <input
               type="text"
               placeholder="Rezepte durchsuchen..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-lg"
+              className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 rounded-2xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-base sm:text-lg min-h-[48px]"
             />
           </div>
 
-          <div className="flex gap-2 mb-4 flex-wrap">
+          <div className="flex gap-2 mb-3 sm:mb-4 flex-wrap">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border-2 border-gray-200 text-gray-700 font-medium active:scale-95 transition"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-2 bg-white rounded-xl border-2 border-gray-200 text-gray-700 font-medium active:scale-95 transition min-h-[44px] text-sm sm:text-base"
             >
-              <SlidersHorizontal className="w-5 h-5" />
+              <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
               Filter
               {(filters.category || filters.maxTime || filters.difficulty || filters.favorite) && (
                 <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
               )}
             </button>
-            <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border-2 border-gray-200">
-              <label className="text-sm font-medium text-gray-700">Sortieren:</label>
+            <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-2 bg-white rounded-xl border-2 border-gray-200 min-h-[44px]">
+              <label className="text-xs sm:text-sm font-medium text-gray-700 hidden sm:inline">Sortieren:</label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="border-0 focus:outline-none text-sm font-medium text-gray-700 cursor-pointer"
+                className="border-0 focus:outline-none text-xs sm:text-sm font-medium text-gray-700 cursor-pointer min-h-[32px]"
               >
                 <option value="date">Datum</option>
                 <option value="title">Titel</option>
@@ -841,7 +841,7 @@ const RecipeApp = () => {
               </select>
               <button
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="text-gray-600 hover:text-gray-800"
+                className="text-gray-600 hover:text-gray-800 min-w-[32px] min-h-[32px] flex items-center justify-center text-lg"
                 title={sortOrder === 'asc' ? 'Aufsteigend' : 'Absteigend'}
               >
                 {sortOrder === 'asc' ? '↑' : '↓'}
@@ -849,34 +849,35 @@ const RecipeApp = () => {
             </div>
             <button
               onClick={() => setShowCategoryManager(!showCategoryManager)}
-              className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border-2 border-gray-200 text-gray-700 font-medium active:scale-95 transition"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-2 bg-white rounded-xl border-2 border-gray-200 text-gray-700 font-medium active:scale-95 transition min-h-[44px] text-sm sm:text-base"
             >
-              <Settings className="w-5 h-5" />
-              Kategorien
+              <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Kategorien</span>
+              <span className="sm:hidden">Kat.</span>
             </button>
           </div>
 
           {showCategoryManager && (
-            <div className="mt-4 bg-white rounded-2xl p-4 shadow-lg">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-800">Kategorien-Struktur</h3>
+            <div className="mt-3 sm:mt-4 bg-white rounded-2xl p-3 sm:p-4 shadow-lg">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h3 className="text-base sm:text-lg font-bold text-gray-800">Kategorien-Struktur</h3>
                 <button
                   onClick={() => setShowCategoryManager(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-500 hover:text-gray-700 min-w-[44px] min-h-[44px] flex items-center justify-center"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
               
-              <div className="space-y-4 mb-4 max-h-96 overflow-y-auto">
+              <div className="space-y-3 sm:space-y-4 mb-3 sm:mb-4 max-h-96 overflow-y-auto">
                 {Object.entries(categoryStructure).map(([mainCat, subCats]) => (
-                  <div key={mainCat} className="border-b border-gray-200 pb-3 last:border-0">
-                    <div className="font-bold text-gray-800 mb-2 text-lg">{mainCat}</div>
-                    <div className="pl-4 space-y-1">
+                  <div key={mainCat} className="border-b border-gray-200 pb-2 sm:pb-3 last:border-0">
+                    <div className="font-bold text-gray-800 mb-2 text-sm sm:text-lg">{mainCat}</div>
+                    <div className="pl-3 sm:pl-4 space-y-1">
                       {subCats.map((subCat) => {
                         const fullCat = `${mainCat} > ${subCat}`;
                         return (
-                          <div key={subCat} className="flex items-center gap-2 p-1 text-sm text-gray-600">
+                          <div key={subCat} className="flex items-center gap-2 p-1 text-xs sm:text-sm text-gray-600">
                             <span className="flex-1">• {subCat}</span>
                           </div>
                         );
@@ -886,20 +887,20 @@ const RecipeApp = () => {
                 ))}
               </div>
               
-              <div className="text-xs text-gray-500 mt-4 p-3 bg-gray-50 rounded-lg">
+              <div className="text-xs text-gray-500 mt-3 sm:mt-4 p-2 sm:p-3 bg-gray-50 rounded-lg">
                 <strong>Hinweis:</strong> Die Kategorien-Struktur ist vordefiniert. Um Kategorien zu ändern, bearbeite den Code in <code>categoryStructure</code>.
               </div>
             </div>
           )}
 
           {showFilters && (
-            <div className="mt-4 bg-white rounded-2xl p-4 shadow-lg space-y-3">
+            <div className="mt-3 sm:mt-4 bg-white rounded-2xl p-3 sm:p-4 shadow-lg space-y-3">
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Kategorie</label>
+                <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-2">Kategorie</label>
                 <select
                   value={filters.category}
                   onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-base sm:text-sm min-h-[44px]"
                 >
                   <option value="">Alle</option>
                   {categories.map((cat) => (
@@ -908,11 +909,11 @@ const RecipeApp = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Max. Zubereitungszeit</label>
+                <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-2">Max. Zubereitungszeit</label>
                 <select
                   value={filters.maxTime}
                   onChange={(e) => setFilters({ ...filters, maxTime: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-base sm:text-sm min-h-[44px]"
                 >
                   <option value="">Egal</option>
                   <option value="15">Bis 15 Min</option>
@@ -921,11 +922,11 @@ const RecipeApp = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Schwierigkeit</label>
+                <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-2">Schwierigkeit</label>
                 <select
                   value={filters.difficulty}
                   onChange={(e) => setFilters({ ...filters, difficulty: e.target.value })}
-                  className="w-full px-4 py-2 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-base sm:text-sm min-h-[44px]"
                 >
                   <option value="">Alle</option>
                   <option value="Einfach">Einfach</option>
@@ -934,19 +935,19 @@ const RecipeApp = () => {
                 </select>
               </div>
               <div>
-                <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
+                <label className="flex items-center gap-2 text-xs sm:text-sm font-bold text-gray-700 mb-2 min-h-[44px]">
                   <input
                     type="checkbox"
                     checked={filters.favorite || false}
                     onChange={(e) => setFilters({ ...filters, favorite: e.target.checked || undefined })}
-                    className="w-4 h-4 text-orange-500 rounded"
+                    className="w-5 h-5 sm:w-4 sm:h-4 text-orange-500 rounded"
                   />
                   Nur Favoriten
                 </label>
               </div>
               <button
                 onClick={() => setFilters({ category: '', maxTime: '', difficulty: '', favorite: undefined })}
-                className="w-full py-2 text-orange-600 font-medium"
+                className="w-full py-3 sm:py-2 text-orange-600 font-medium min-h-[44px] text-sm sm:text-base"
               >
                 Filter zurücksetzen
               </button>
@@ -955,13 +956,13 @@ const RecipeApp = () => {
         </header>
 
         {filteredRecipes.length === 0 ? (
-          <div className="text-center py-16">
-            <ChefHat className="w-20 h-20 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg mb-2">Keine Rezepte gefunden</p>
-            <p className="text-gray-400">{recipes.length === 0 ? 'Füge dein erstes Rezept hinzu!' : 'Versuche andere Filter'}</p>
+          <div className="text-center py-12 sm:py-16">
+            <ChefHat className="w-16 h-16 sm:w-20 sm:h-20 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 text-base sm:text-lg mb-2">Keine Rezepte gefunden</p>
+            <p className="text-gray-400 text-sm sm:text-base">{recipes.length === 0 ? 'Füge dein erstes Rezept hinzu!' : 'Versuche andere Filter'}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             {filteredRecipes.map(recipe => (
               <div
                 key={recipe.id}
@@ -971,68 +972,73 @@ const RecipeApp = () => {
                   setCurrentStepIndex(0);
                   setView('detail');
                 }}
-                className="bg-white rounded-3xl shadow-lg overflow-hidden cursor-pointer transform transition hover:scale-105 active:scale-95 relative"
+                className="bg-white rounded-2xl sm:rounded-3xl shadow-lg overflow-hidden cursor-pointer transform transition hover:scale-105 active:scale-95 relative"
               >
                 {(recipe.isFavorite || recipe.favorite) && (
-                  <div className="absolute top-3 right-3 z-10">
-                    <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
+                  <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-10">
+                    <Star className="w-5 h-5 sm:w-6 sm:h-6 fill-yellow-400 text-yellow-400" />
                   </div>
                 )}
                 {recipe.image && (
-                  <div className="h-48 overflow-hidden bg-gray-100">
+                  <div className="h-40 sm:h-48 overflow-hidden bg-gray-100">
                     <img src={recipe.image} alt={recipe.title} className="w-full h-full object-cover" />
                   </div>
                 )}
-                <div className="p-5">
-                  <h3 className="text-xl font-bold text-gray-800 mb-3">{recipe.title}</h3>
-                  <div className="flex gap-4 text-sm text-gray-600 mb-3 flex-wrap">
+                <div className="p-4 sm:p-5">
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 sm:mb-3 line-clamp-2">{recipe.title}</h3>
+                  <div className="flex gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 flex-wrap">
                     <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
+                      <Users className="w-3 h-3 sm:w-4 sm:h-4" />
                       <span>{recipe.servings} Portionen</span>
                     </div>
                     {recipe.time && (
                       <div className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
+                        <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
                         <span>{recipe.time} Min</span>
                       </div>
                     )}
                     {recipe.difficulty && (
                       <div className="flex items-center gap-1">
-                        <SlidersHorizontal className="w-4 h-4" />
+                        <SlidersHorizontal className="w-3 h-3 sm:w-4 sm:h-4" />
                         <span>{recipe.difficulty}</span>
                       </div>
                     )}
                   </div>
                   {recipe.rating > 0 && (
-                    <div className="flex gap-1 mb-3">
+                    <div className="flex gap-1 mb-2 sm:mb-3">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <Star
                           key={star}
-                          className={`w-4 h-4 ${star <= recipe.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                          className={`w-3 h-3 sm:w-4 sm:h-4 ${star <= recipe.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
                         />
                       ))}
                     </div>
                   )}
-                  <div className="mb-3 flex flex-wrap gap-2">
+                  <div className="mb-2 sm:mb-3 flex flex-wrap gap-1.5 sm:gap-2">
                     {recipe.category && (
-                      <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                        {recipe.category}
+                      <span className="px-2 sm:px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                        {recipe.category.length > 20 ? recipe.category.substring(0, 20) + '...' : recipe.category}
                       </span>
                     )}
                     {recipe.date && (
-                      <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium flex items-center gap-1">
+                      <span className="px-2 sm:px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
                         {new Date(recipe.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                       </span>
                     )}
                   </div>
                   {recipe.tags && recipe.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {recipe.tags.map((tag, idx) => (
-                        <span key={idx} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
-                          {tag}
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                      {recipe.tags.slice(0, 3).map((tag, idx) => (
+                        <span key={idx} className="px-2 sm:px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                          {tag.length > 15 ? tag.substring(0, 15) + '...' : tag}
                         </span>
                       ))}
+                      {recipe.tags.length > 3 && (
+                        <span className="px-2 sm:px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                          +{recipe.tags.length - 3}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1319,47 +1325,47 @@ const RecipeApp = () => {
     const factor = servings / selectedRecipe.servings;
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
-        <div className="max-w-2xl mx-auto p-4 pb-8">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 pb-24">
+        <div className="max-w-2xl mx-auto p-4 sm:p-6 pb-8">
           <button
             onClick={() => setView('detail')}
-            className="flex items-center gap-2 text-orange-600 mb-4 font-medium text-lg"
+            className="flex items-center gap-2 text-orange-600 mb-4 font-medium text-base sm:text-lg min-h-[44px] px-2 -ml-2"
           >
             <ArrowLeft className="w-5 h-5" />
-            Zurück zur Übersicht
+            <span>Zurück zur Übersicht</span>
           </button>
 
-          <div className="bg-white rounded-3xl p-6 shadow-lg mb-6">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4 text-center">{selectedRecipe.title}</h1>
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg mb-4 sm:mb-6">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-4 text-center">{selectedRecipe.title}</h1>
             
-            <div className="flex items-center justify-center gap-6 mb-6">
+            <div className="flex items-center justify-center gap-4 sm:gap-6 mb-4 sm:mb-6">
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-800">{servings}</div>
-                <div className="text-sm text-gray-600">Portionen</div>
+                <div className="text-xl sm:text-2xl font-bold text-gray-800">{servings}</div>
+                <div className="text-xs sm:text-sm text-gray-600">Portionen</div>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-2 sm:gap-3">
                 <button
                   onClick={() => setServings(Math.max(1, servings - 1))}
-                  className="w-14 h-14 rounded-full bg-orange-100 text-orange-600 font-bold text-2xl flex items-center justify-center active:scale-95"
+                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-orange-100 text-orange-600 font-bold text-xl sm:text-2xl flex items-center justify-center active:scale-95 min-w-[48px] min-h-[48px]"
                 >
                   -
                 </button>
                 <button
                   onClick={() => setServings(servings + 1)}
-                  className="w-14 h-14 rounded-full bg-orange-100 text-orange-600 font-bold text-2xl flex items-center justify-center active:scale-95"
+                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-orange-100 text-orange-600 font-bold text-xl sm:text-2xl flex items-center justify-center active:scale-95 min-w-[48px] min-h-[48px]"
                 >
                   +
                 </button>
               </div>
             </div>
 
-            <div className="mb-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Zutaten</h2>
-              <div className="space-y-3">
+            <div className="mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">Zutaten</h2>
+              <div className="space-y-2 sm:space-y-3">
                 {selectedRecipe.ingredients.map((ing, idx) => (
-                  <div key={idx} className="flex justify-between items-center py-3 px-4 bg-gray-50 rounded-xl">
-                    <span className="text-gray-700 text-lg">{ing.name}</span>
-                    <span className="font-bold text-gray-800 text-xl">
+                  <div key={idx} className="flex justify-between items-center py-2.5 sm:py-3 px-3 sm:px-4 bg-gray-50 rounded-xl">
+                    <span className="text-gray-700 text-base sm:text-lg pr-2">{ing.name}</span>
+                    <span className="font-bold text-gray-800 text-base sm:text-xl flex-shrink-0">
                       {parseFloat((parseFloat(ing.amount) * factor).toFixed(1))} {ing.unit}
                     </span>
                   </div>
@@ -1369,28 +1375,29 @@ const RecipeApp = () => {
 
             <button
               onClick={() => addToShoppingList(selectedRecipe, servings)}
-              className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 active:scale-95 transition shadow-lg mb-4"
+              className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 sm:py-4 rounded-2xl font-bold text-base sm:text-lg flex items-center justify-center gap-2 active:scale-95 transition shadow-lg mb-4 min-h-[52px]"
             >
               <ShoppingCart className="w-5 h-5" />
-              Zur Einkaufsliste
+              <span className="hidden sm:inline">Zur Einkaufsliste</span>
+              <span className="sm:hidden">Einkauf</span>
             </button>
           </div>
 
-          <div className="bg-white rounded-3xl p-6 shadow-lg">
-            <div className="text-center mb-6">
-              <div className="text-6xl font-bold text-orange-500 mb-2">
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
+            <div className="text-center mb-4 sm:mb-6">
+              <div className="text-4xl sm:text-6xl font-bold text-orange-500 mb-2">
                 {currentStepIndex + 1} / {selectedRecipe.steps.length}
               </div>
-              <div className="text-sm text-gray-600">Schritt</div>
+              <div className="text-xs sm:text-sm text-gray-600">Schritt</div>
             </div>
 
-            <div className="bg-orange-50 rounded-3xl p-8 mb-6 min-h-[300px] flex items-center justify-center">
-              <p className="text-2xl md:text-3xl text-gray-800 leading-relaxed text-center">
+            <div className="bg-orange-50 rounded-2xl sm:rounded-3xl p-6 sm:p-8 mb-4 sm:mb-6 min-h-[200px] sm:min-h-[300px] flex items-center justify-center">
+              <p className="text-xl sm:text-2xl md:text-3xl text-gray-800 leading-relaxed text-center">
                 {selectedRecipe.steps[currentStepIndex]}
               </p>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
               <button
                 onClick={() => {
                   if (currentStepIndex > 0) {
@@ -1398,7 +1405,7 @@ const RecipeApp = () => {
                   }
                 }}
                 disabled={currentStepIndex === 0}
-                className="flex-1 py-5 bg-gray-200 text-gray-700 rounded-2xl font-bold disabled:opacity-50 active:scale-95 transition text-xl"
+                className="flex-1 py-4 sm:py-5 bg-gray-200 text-gray-700 rounded-2xl font-bold disabled:opacity-50 active:scale-95 transition text-base sm:text-xl min-h-[52px]"
               >
                 ← Zurück
               </button>
@@ -1406,9 +1413,9 @@ const RecipeApp = () => {
                 onClick={() => {
                   speakText(`Schritt ${currentStepIndex + 1}: ${selectedRecipe.steps[currentStepIndex]}`);
                 }}
-                className="px-6 py-5 bg-blue-500 text-white rounded-2xl font-bold active:scale-95 transition"
+                className="px-6 py-4 sm:py-5 bg-blue-500 text-white rounded-2xl font-bold active:scale-95 transition min-h-[52px] flex items-center justify-center"
               >
-                <Mic className="w-6 h-6" />
+                <Mic className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
               <button
                 onClick={() => {
@@ -1417,15 +1424,15 @@ const RecipeApp = () => {
                   }
                 }}
                 disabled={currentStepIndex === selectedRecipe.steps.length - 1}
-                className="flex-1 py-5 bg-orange-500 text-white rounded-2xl font-bold disabled:opacity-50 active:scale-95 transition text-xl"
+                className="flex-1 py-4 sm:py-5 bg-orange-500 text-white rounded-2xl font-bold disabled:opacity-50 active:scale-95 transition text-base sm:text-xl min-h-[52px]"
               >
                 Weiter →
               </button>
             </div>
 
             {currentStepIndex === selectedRecipe.steps.length - 1 && (
-              <div className="mt-6 p-4 bg-green-50 rounded-2xl text-center">
-                <p className="text-xl font-bold text-green-700">🎉 Fertig! Guten Appetit!</p>
+              <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-green-50 rounded-2xl text-center">
+                <p className="text-lg sm:text-xl font-bold text-green-700">🎉 Fertig! Guten Appetit!</p>
               </div>
             )}
           </div>
