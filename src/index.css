@@ -26,6 +26,40 @@ body {
 button {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  min-height: 44px; /* iOS minimum touch target */
+}
+
+/* Mobile input improvements */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  input[type="file"],
+  textarea,
+  select {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+    -webkit-appearance: none;
+    border-radius: 12px;
+  }
+  
+  /* Better focus states for mobile */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+  }
+  
+  /* Safe area for iPhone X and newer */
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Prevent body scroll when keyboard is open on iOS */
+  body.keyboard-open {
+    position: fixed;
+    width: 100%;
+  }
 }
 
 /* Prevent text selection on mobile */

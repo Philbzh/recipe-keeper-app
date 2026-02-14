@@ -1642,19 +1642,19 @@ const RecipeApp = () => {
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 pb-24">
-        <div className="max-w-6xl mx-auto p-6">
-          <div className="grid lg:grid-cols-[1fr_300px] gap-6">
+        <div className="max-w-6xl mx-auto p-4 sm:p-6">
+          <div className="grid lg:grid-cols-[1fr_300px] gap-4 sm:gap-6">
             {/* Main Form */}
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <button
                 onClick={() => setView('home')}
-                className="flex items-center gap-2 text-orange-600 mb-6 font-medium text-lg hover:text-orange-700 transition"
+                className="flex items-center gap-2 text-orange-600 mb-4 sm:mb-6 font-medium text-base sm:text-lg hover:text-orange-700 transition min-h-[44px] px-2 -ml-2"
               >
                 <ArrowLeft className="w-5 h-5" />
-                Zurück
+                <span>Zurück</span>
               </button>
 
-              <h1 className="text-4xl font-bold text-gray-800 mb-6">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-4 sm:mb-6">
                 {isEditing ? `Bearbeiten: ${editingRecipe?.title || ''}` : 'Neues Rezept'}
               </h1>
               {isEditing && !editingRecipe && (
@@ -1662,18 +1662,18 @@ const RecipeApp = () => {
                   Fehler: Rezept-Daten konnten nicht geladen werden. Bitte versuche es erneut.
                 </div>
               )}
-            <div className="bg-white rounded-3xl p-6 shadow-lg">
+            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
               <label className="block text-sm font-bold text-gray-700 mb-2">Titel*</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="z.B. Spaghetti Carbonara"
-                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-lg"
+                className="w-full px-4 py-3 sm:py-4 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-base sm:text-lg min-h-[48px]"
               />
             </div>
 
-            <div className="bg-white rounded-3xl p-6 shadow-lg">
+            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
               <label className="block text-sm font-bold text-gray-700 mb-2">
                 Rezeptfoto 📸
               </label>
@@ -1681,14 +1681,14 @@ const RecipeApp = () => {
                 type="file"
                 accept="image/*"
                 onChange={handleImageUpload}
-                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none"
+                className="w-full px-4 py-3 sm:py-4 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none min-h-[48px] text-base"
               />
               {image && (
                 <img src={image} alt="Vorschau" className="mt-4 w-full h-48 object-cover rounded-xl" />
               )}
             </div>
 
-            <div className="bg-white rounded-3xl p-6 shadow-lg grid grid-cols-2 gap-4">
+            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="col-span-2">
                 <label className="block text-sm font-bold text-gray-700 mb-2">Hauptkategorie</label>
                 <select
@@ -1697,7 +1697,7 @@ const RecipeApp = () => {
                     setMainCategory(e.target.value);
                     setSubCategory(''); // Reset subcategory when main changes
                   }}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-lg"
+                  className="w-full px-4 py-3 sm:py-4 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-base sm:text-lg min-h-[48px]"
                 >
                   <option value="">Keine Angabe</option>
                   {Object.keys(categoryStructure).map((mainCat) => (
@@ -1711,7 +1711,7 @@ const RecipeApp = () => {
                   <select
                     value={subCategory}
                     onChange={(e) => setSubCategory(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-lg"
+                    className="w-full px-4 py-3 sm:py-4 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-base sm:text-lg min-h-[48px]"
                   >
                     <option value="">Bitte wählen</option>
                     {categoryStructure[mainCategory]?.map((subCat) => (
@@ -1729,7 +1729,7 @@ const RecipeApp = () => {
                   type="date"
                   value={recipeDate}
                   onChange={(e) => setRecipeDate(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-lg"
+                  className="w-full px-4 py-3 sm:py-4 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-base sm:text-lg min-h-[48px]"
                 />
               </div>
               <div>
@@ -1739,7 +1739,7 @@ const RecipeApp = () => {
                   value={recipeServings}
                   onChange={(e) => setRecipeServings(parseInt(e.target.value) || 1)}
                   min="1"
-                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-lg"
+                  className="w-full px-4 py-3 sm:py-4 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-base sm:text-lg min-h-[48px]"
                 />
               </div>
               <div>
@@ -1753,7 +1753,7 @@ const RecipeApp = () => {
                   onChange={(e) => setPrepTime(parseInt(e.target.value) || 0)}
                   min="0"
                   placeholder="15"
-                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-lg"
+                  className="w-full px-4 py-3 sm:py-4 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-base sm:text-lg min-h-[48px]"
                 />
               </div>
               <div>
@@ -1767,7 +1767,7 @@ const RecipeApp = () => {
                   onChange={(e) => setCookTime(parseInt(e.target.value) || 0)}
                   min="0"
                   placeholder="30"
-                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-lg"
+                  className="w-full px-4 py-3 sm:py-4 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-base sm:text-lg min-h-[48px]"
                 />
               </div>
               {(prepTime > 0 || cookTime > 0) && (
@@ -1784,7 +1784,7 @@ const RecipeApp = () => {
                 <select
                   value={difficulty}
                   onChange={(e) => setDifficulty(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-lg"
+                  className="w-full px-4 py-3 sm:py-4 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-base sm:text-lg min-h-[48px]"
                 >
                   <option value="">Keine Angabe</option>
                   <option value="Einfach">Einfach</option>
@@ -1795,7 +1795,7 @@ const RecipeApp = () => {
             </div>
 
             {/* Tags with Chips */}
-            <div className="bg-white rounded-3xl p-6 shadow-lg">
+            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
               <label className="block text-sm font-bold text-gray-700 mb-3">Tags</label>
               
               {/* Selected Tags */}
@@ -1803,12 +1803,12 @@ const RecipeApp = () => {
                 {selectedTags.map((tag, idx) => (
                   <span 
                     key={idx}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-full text-sm font-medium shadow-sm hover:shadow-md transition"
+                    className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-orange-100 text-orange-700 rounded-full text-xs sm:text-sm font-medium shadow-sm hover:shadow-md transition min-h-[36px]"
                   >
                     {tag}
                     <button
                       onClick={() => removeTag(tag)}
-                      className="hover:bg-orange-200 rounded-full p-1 transition"
+                      className="hover:bg-orange-200 rounded-full p-1 transition min-w-[28px] min-h-[28px] flex items-center justify-center"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -1826,7 +1826,7 @@ const RecipeApp = () => {
                       <button
                         key={idx}
                         onClick={() => addTag(tag)}
-                        className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-orange-100 hover:text-orange-600 transition shadow-sm"
+                        className="px-3 py-2 sm:py-1.5 bg-gray-100 text-gray-700 rounded-full text-xs sm:text-sm hover:bg-orange-100 hover:text-orange-600 transition shadow-sm min-h-[36px]"
                       >
                         {tag}
                       </button>
@@ -1848,11 +1848,11 @@ const RecipeApp = () => {
                     }
                   }}
                   placeholder="Eigenes Tag hinzufügen..."
-                  className="flex-1 px-4 py-2 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-sm"
+                  className="flex-1 px-4 py-3 sm:py-2 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-base sm:text-sm min-h-[44px]"
                 />
                 <button
                   onClick={handleNewTag}
-                  className="px-4 py-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition font-medium"
+                  className="px-4 sm:px-5 py-3 sm:py-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition font-medium min-w-[52px] min-h-[44px] flex items-center justify-center"
                 >
                   <Plus className="w-5 h-5" />
                 </button>
@@ -1860,21 +1860,21 @@ const RecipeApp = () => {
             </div>
 
             {/* Ingredients Section with Smart Input */}
-            <div className="bg-white rounded-3xl p-6 shadow-lg">
+            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-800">Zutaten*</h3>
                 <button
                   onClick={addIngredient}
-                  className="px-4 py-2 bg-orange-100 text-orange-600 rounded-full font-medium flex items-center gap-2 hover:bg-orange-200 active:scale-95 transition"
+                  className="px-4 py-2.5 sm:py-2 bg-orange-100 text-orange-600 rounded-full font-medium flex items-center gap-2 hover:bg-orange-200 active:scale-95 transition min-h-[44px]"
                 >
                   <Plus className="w-4 h-4" />
-                  Zutat
+                  <span className="hidden sm:inline">Zutat</span>
                 </button>
               </div>
 
               {/* Quick Add */}
-              <div className="mb-4 p-4 bg-blue-50 rounded-xl border-2 border-blue-100">
-                <label className="text-sm font-medium text-blue-900 mb-2 block">
+              <div className="mb-4 p-3 sm:p-4 bg-blue-50 rounded-xl border-2 border-blue-100">
+                <label className="text-xs sm:text-sm font-medium text-blue-900 mb-2 block">
                   ⚡ Schnell-Eingabe (z.B. "200g Mehl", "2 EL Butter")
                 </label>
                 <div className="flex gap-2">
@@ -1889,13 +1889,14 @@ const RecipeApp = () => {
                       }
                     }}
                     placeholder="200g Mehl"
-                    className="flex-1 px-4 py-3 rounded-xl border-2 border-blue-200 focus:border-blue-400 focus:outline-none"
+                    className="flex-1 px-4 py-3 rounded-xl border-2 border-blue-200 focus:border-blue-400 focus:outline-none text-base min-h-[44px]"
                   />
                   <button
                     onClick={handleQuickIngredientAdd}
-                    className="px-6 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition font-medium"
+                    className="px-4 sm:px-6 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition font-medium min-h-[44px] whitespace-nowrap"
                   >
-                    Hinzufügen
+                    <span className="hidden sm:inline">Hinzufügen</span>
+                    <span className="sm:hidden">+</span>
                   </button>
                 </div>
               </div>
@@ -1903,8 +1904,9 @@ const RecipeApp = () => {
               {/* Ingredients List */}
               <div className="space-y-3">
                 {ingredients.map((ing, idx) => (
-                  <div key={idx} className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200 hover:border-orange-300 transition">
-                    <div className="grid grid-cols-[100px_130px_1fr_auto] gap-3 items-center">
+                  <div key={idx} className="bg-gray-50 rounded-xl p-3 sm:p-4 border-2 border-gray-200 hover:border-orange-300 transition">
+                    {/* Mobile: Stack layout, Desktop: Grid layout */}
+                    <div className="grid grid-cols-1 sm:grid-cols-[100px_130px_1fr_auto] gap-3 items-center">
                       <div>
                         <label className="text-xs text-gray-500 block mb-1">Menge</label>
                         <input
@@ -1912,7 +1914,7 @@ const RecipeApp = () => {
                           value={ing.amount}
                           onChange={(e) => updateIngredient(idx, 'amount', e.target.value)}
                           placeholder="200"
-                          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:border-orange-400 focus:outline-none text-center font-medium"
+                          className="w-full px-3 py-3 sm:py-2.5 rounded-lg border border-gray-300 focus:border-orange-400 focus:outline-none text-center font-medium text-base min-h-[44px]"
                         />
                       </div>
                       <div>
@@ -1920,7 +1922,7 @@ const RecipeApp = () => {
                         <select
                           value={ing.unit}
                           onChange={(e) => updateIngredient(idx, 'unit', e.target.value)}
-                          className="w-full px-2 py-2.5 rounded-lg border border-gray-300 focus:border-orange-400 focus:outline-none text-sm"
+                          className="w-full px-3 sm:px-2 py-3 sm:py-2.5 rounded-lg border border-gray-300 focus:border-orange-400 focus:outline-none text-base sm:text-sm min-h-[44px]"
                         >
                           {COMMON_UNITS.map(u => (
                             <option key={u.value} value={u.value}>{u.label}</option>
@@ -1935,7 +1937,7 @@ const RecipeApp = () => {
                           onChange={(e) => updateIngredient(idx, 'name', e.target.value)}
                           placeholder="z.B. Mehl"
                           list={`ingredient-suggestions-${idx}`}
-                          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:border-orange-400 focus:outline-none"
+                          className="w-full px-3 py-3 sm:py-2.5 rounded-lg border border-gray-300 focus:border-orange-400 focus:outline-none text-base min-h-[44px]"
                         />
                         <datalist id={`ingredient-suggestions-${idx}`}>
                           {COMMON_INGREDIENTS.map(item => (
@@ -1946,7 +1948,7 @@ const RecipeApp = () => {
                       {ingredients.length > 1 && (
                         <button
                           onClick={() => removeIngredient(idx)}
-                          className="p-2.5 text-red-500 hover:bg-red-50 rounded-lg transition self-end"
+                          className="p-2.5 sm:p-2 text-red-500 hover:bg-red-50 rounded-lg transition self-end sm:self-center min-w-[44px] min-h-[44px] flex items-center justify-center"
                         >
                           <Trash2 className="w-5 h-5" />
                         </button>
@@ -1958,31 +1960,31 @@ const RecipeApp = () => {
             </div>
 
             {/* Steps with Drag & Drop */}
-            <div className="bg-white rounded-3xl p-6 shadow-lg">
+            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-800">Zubereitung*</h3>
                 <button
                   onClick={addStep}
-                  className="px-4 py-2 bg-orange-100 text-orange-600 rounded-full font-medium flex items-center gap-2 hover:bg-orange-200 active:scale-95 transition"
+                  className="px-4 py-2.5 sm:py-2 bg-orange-100 text-orange-600 rounded-full font-medium flex items-center gap-2 hover:bg-orange-200 active:scale-95 transition min-h-[44px]"
                 >
                   <Plus className="w-4 h-4" />
-                  Schritt
+                  <span className="hidden sm:inline">Schritt</span>
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mb-4">💡 Tipp: Ziehe Schritte zum Umsortieren</p>
+              <p className="text-xs text-gray-500 mb-4 hidden sm:block">💡 Tipp: Ziehe Schritte zum Umsortieren</p>
               <div className="space-y-3">
                 {steps.map((step, idx) => (
                   <div 
                     key={idx} 
-                    className="flex gap-3 cursor-move hover:bg-gray-50 p-2 rounded-lg transition"
+                    className="flex gap-2 sm:gap-3 cursor-move hover:bg-gray-50 p-2 rounded-lg transition"
                     draggable
                     onDragStart={(e) => handleStepDragStart(e, idx)}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => handleStepDrop(e, idx)}
                   >
-                    <div className="flex items-start gap-2 pt-2">
-                      <GripVertical className="w-5 h-5 text-gray-400 cursor-grab active:cursor-grabbing" />
-                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-lg shadow-md">
+                    <div className="flex items-start gap-2 pt-2 flex-shrink-0">
+                      <GripVertical className="w-5 h-5 text-gray-400 cursor-grab active:cursor-grabbing hidden sm:block" />
+                      <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-base sm:text-lg shadow-md">
                         {idx + 1}
                       </div>
                     </div>
@@ -1990,13 +1992,13 @@ const RecipeApp = () => {
                       value={step}
                       onChange={(e) => updateStep(idx, e.target.value)}
                       placeholder="Beschreibe diesen Schritt..."
-                      rows="3"
-                      className="flex-1 px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-orange-400 focus:outline-none resize-none text-base"
+                      rows="4"
+                      className="flex-1 px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-orange-400 focus:outline-none resize-none text-base min-h-[100px]"
                     />
                     {steps.length > 1 && (
                       <button
                         onClick={() => removeStep(idx)}
-                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg h-fit mt-2 transition"
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg h-fit mt-2 transition min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
@@ -2007,7 +2009,7 @@ const RecipeApp = () => {
             </div>
 
             {/* Save Buttons */}
-            <div className="flex gap-3 sticky bottom-20 bg-white p-4 rounded-2xl shadow-2xl border-2 border-gray-200">
+            <div className="flex gap-3 sticky bottom-4 sm:bottom-20 bg-white p-3 sm:p-4 rounded-2xl shadow-2xl border-2 border-gray-200 z-10">
               {isEditing && (
                 <button
                   onClick={() => {
@@ -2019,16 +2021,17 @@ const RecipeApp = () => {
                     }
                     setView('detail');
                   }}
-                  className="flex-1 bg-gray-200 text-gray-700 py-4 rounded-2xl font-bold text-lg hover:bg-gray-300 active:scale-95 transition"
+                  className="flex-1 bg-gray-200 text-gray-700 py-4 sm:py-4 rounded-2xl font-bold text-base sm:text-lg hover:bg-gray-300 active:scale-95 transition min-h-[52px]"
                 >
                   Abbrechen
                 </button>
               )}
               <button
                 onClick={saveRecipe}
-                className={`${isEditing ? 'flex-1' : 'w-full'} bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-2xl font-bold text-lg hover:shadow-xl active:scale-95 transition shadow-lg`}
+                className={`${isEditing ? 'flex-1' : 'w-full'} bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-2xl font-bold text-base sm:text-lg hover:shadow-xl active:scale-95 transition shadow-lg min-h-[52px]`}
               >
-                {isEditing ? '✓ Änderungen speichern' : '✓ Rezept speichern'}
+                <span className="hidden sm:inline">{isEditing ? '✓ Änderungen speichern' : '✓ Rezept speichern'}</span>
+                <span className="sm:hidden">{isEditing ? '✓ Speichern' : '✓ Speichern'}</span>
               </button>
             </div>
           </div>
@@ -2520,11 +2523,11 @@ const RecipeApp = () => {
 
   // Bottom Navigation
   const BottomNav = ({ currentView }: { currentView: string }) => (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
-      <div className="max-w-4xl mx-auto flex justify-around py-3">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 safe-area-inset-bottom">
+      <div className="max-w-4xl mx-auto flex justify-around py-2 sm:py-3">
         <button
           onClick={() => setView('home')}
-          className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition ${
+          className={`flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-xl transition min-h-[60px] min-w-[60px] justify-center ${
             currentView === 'home' ? 'text-orange-600 bg-orange-50' : 'text-gray-500'
           }`}
         >
@@ -2533,7 +2536,7 @@ const RecipeApp = () => {
         </button>
         <button
           onClick={() => setView('mealplan')}
-          className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition ${
+          className={`flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-xl transition min-h-[60px] min-w-[60px] justify-center ${
             currentView === 'mealplan' ? 'text-orange-600 bg-orange-50' : 'text-gray-500'
           }`}
         >
@@ -2542,21 +2545,21 @@ const RecipeApp = () => {
         </button>
         <button
           onClick={() => setView('add')}
-          className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl text-white bg-gradient-to-r from-orange-500 to-red-500 shadow-lg active:scale-95 transition"
+          className="flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-xl text-white bg-gradient-to-r from-orange-500 to-red-500 shadow-lg active:scale-95 transition min-h-[60px] min-w-[60px] justify-center"
         >
           <Plus className="w-6 h-6" />
           <span className="text-xs font-bold">Neu</span>
         </button>
         <button
           onClick={() => setView('shopping')}
-          className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition relative ${
+          className={`flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-xl transition relative min-h-[60px] min-w-[60px] justify-center ${
             currentView === 'shopping' ? 'text-orange-600 bg-orange-50' : 'text-gray-500'
           }`}
         >
           <ShoppingCart className="w-5 h-5" />
           <span className="text-xs font-medium">Einkauf</span>
           {shoppingList.length > 0 && (
-            <span className="absolute top-1 right-2 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+            <span className="absolute top-1 right-1 sm:right-2 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
               {shoppingList.length}
             </span>
           )}
