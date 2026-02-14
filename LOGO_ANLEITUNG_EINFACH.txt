@@ -1,0 +1,76 @@
+═══════════════════════════════════════════════════════════════
+  EINFACHE ANLEITUNG: Logo für Ordner erstellen
+═══════════════════════════════════════════════════════════════
+
+METHODE 1: Logo aus HTML-Datei speichern
+─────────────────────────────────────────
+
+1. Öffne die Datei "logo_icon.html" im Browser
+   (Doppelklick oder Rechtsklick → "Öffnen mit" → Browser)
+
+2. Rechtsklick auf das Logo → "Als Bild speichern unter..."
+
+3. Speichere es als "logo.png" im KOCHREZEPTE-Ordner
+
+4. Verwende logo.png als Ordner-Icon (siehe unten)
+
+
+METHODE 2: SVG-Datei verwenden
+──────────────────────────────
+
+1. Die Dateien logo.svg und logo_simple.svg sollten im 
+   KOCHREZEPTE-Ordner sein
+
+2. Falls nicht: Kopiere sie vom alten Verzeichnis:
+   c:\Users\User\..2_PHIL\AI\KOCHREZEPTE\logo.svg
+   → Kopiere nach: C:\Users\User\Desktop\KOCHREZEPTE\
+
+
+METHODE 3: Online Logo erstellen
+─────────────────────────────────
+
+1. Gehe zu: https://www.favicon-generator.org/
+   oder: https://realfavicongenerator.net/
+
+2. Lade logo.svg hoch oder erstelle ein neues Logo
+
+3. Lade die .ico-Datei herunter
+
+4. Verwende die .ico-Datei als Ordner-Icon
+
+
+ORDNER-ICON VERWENDEN (Windows 11):
+───────────────────────────────────
+
+1. Öffne den Ordner KOCHREZEPTE auf deinem Desktop
+
+2. Rechtsklick auf den Ordner → "Eigenschaften"
+
+3. Tab "Anpassen" → "Anderes Symbol..."
+
+4. Klicke "Durchsuchen..." 
+
+5. Wähle:
+   - logo.png (wenn du es aus HTML gespeichert hast)
+   - logo.svg (falls unterstützt)
+   - logo.ico (wenn du es konvertiert hast)
+
+6. Klicke "OK" → "Übernehmen" → "OK"
+
+
+ORDNER-ICON VERWENDEN (Windows 10):
+────────────────────────────────────
+
+1. Rechtsklick auf Ordner → "Eigenschaften"
+
+2. Tab "Anpassen" → "Anderes Symbol..."
+
+3. Wähle eine .ico-Datei (SVG funktioniert nicht in Win10)
+
+4. Falls keine .ico vorhanden:
+   - Konvertiere logo.svg zu .ico online
+   - Oder verwende logo_icon.html → Als PNG speichern → 
+     Online zu .ico konvertieren
+
+
+═══════════════════════════════════════════════════════════════

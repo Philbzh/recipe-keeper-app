@@ -1,0 +1,52 @@
+═══════════════════════════════════════════════════════════════
+  SCHNELLSTART: Projekt starten
+═══════════════════════════════════════════════════════════════
+
+WICHTIG: Du musst im Projektverzeichnis sein!
+
+───────────────────────────────────────────────────────────────
+  OPTION 1: Wenn Projekt auf Desktop verschoben wurde
+───────────────────────────────────────────────────────────────
+
+Führe diese Befehle aus:
+
+cd "$env:USERPROFILE\Desktop\KOCHREZEPTE"
+npm install
+npm run dev
+
+
+───────────────────────────────────────────────────────────────
+  OPTION 2: Wenn Projekt noch im alten Verzeichnis ist
+───────────────────────────────────────────────────────────────
+
+Führe diese Befehle aus:
+
+cd "c:\Users\User\..2_PHIL\AI\KOCHREZEPTE"
+npm install
+npm run dev
+
+
+───────────────────────────────────────────────────────────────
+  PRÜFEN: Wo ist das Projekt?
+───────────────────────────────────────────────────────────────
+
+Führe diesen Befehl aus, um zu prüfen, ob package.json existiert:
+
+Test-Path "$env:USERPROFILE\Desktop\KOCHREZEPTE\package.json"
+
+Wenn "True" → Projekt ist auf Desktop
+Wenn "False" → Projekt ist noch im alten Verzeichnis
+
+
+───────────────────────────────────────────────────────────────
+  HILFE: Projektverzeichnis finden
+───────────────────────────────────────────────────────────────
+
+Führe aus:
+
+Get-ChildItem -Path "$env:USERPROFILE\Desktop" -Filter "KOCHREZEPTE" -Directory
+Get-ChildItem -Path "c:\Users\User\..2_PHIL\AI" -Filter "KOCHREZEPTE" -Directory
+
+Das zeigt dir, wo das Projekt ist.
+
+═══════════════════════════════════════════════════════════════

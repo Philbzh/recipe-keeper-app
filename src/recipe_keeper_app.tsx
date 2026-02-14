@@ -1,0 +1,2604 @@
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { supabase, isSupabaseConfigured } from './supabaseClient';
+import Auth from './Auth';
+import RecipeDataService from './dataService';
+import { MealPlan, ShoppingCategory, ShoppingItem } from './types';
+import { searchRecipes, sortRecipes, generateId, mergeIngredients, groupByCategory, categorizeShoppingItem, parseIngredientInput } from './utils';
+import { Plus, Search, ShoppingCart, ChefHat, Users, Clock, ArrowLeft, Trash2, Check, X, Star, Mic, SlidersHorizontal, Share2, Play, Edit2, Settings, Calendar, GripVertical, ScanLine } from 'lucide-react';
+
+// Constants for improved AddRecipeView
+const COMMON_UNITS = [
+  { value: '', label: '—' },
+  { value: 'g', label: 'g (Gramm)' },
+  { value: 'kg', label: 'kg (Kilogramm)' },
+  { value: 'ml', label: 'ml (Milliliter)' },
+  { value: 'l', label: 'l (Liter)' },
+  { value: 'TL', label: 'TL (Teelöffel)' },
+  { value: 'EL', label: 'EL (Esslöffel)' },
+  { value: 'Tasse', label: 'Tasse' },
+  { value: 'Prise', label: 'Prise' },
+  { value: 'Stück', label: 'Stück' },
+  { value: 'Stk', label: 'Stk' },
+  { value: 'Bund', label: 'Bund' },
+  { value: 'Zweig', label: 'Zweig' },
+  { value: 'Zehe', label: 'Zehe' },
+  { value: 'Scheibe', label: 'Scheibe' },
+  { value: 'Dose', label: 'Dose' },
+  { value: 'Glas', label: 'Glas' }
+];
+
+const COMMON_INGREDIENTS = [
+  'Mehl', 'Zucker', 'Salz', 'Pfeffer', 'Butter', 'Öl', 'Milch', 'Eier', 'Zwiebeln', 'Knoblauch',
+  'Tomaten', 'Paprika', 'Karotten', 'Kartoffeln', 'Reis', 'Nudeln', 'Hähnchen', 'Rindfleisch',
+  'Käse', 'Joghurt', 'Sahne', 'Essig', 'Zitrone', 'Basilikum', 'Oregano', 'Thymian'
+];
+
+const SUGGESTED_TAGS = [
+  '🥬 Vegetarisch', '🌱 Vegan', '⚡ Schnell (unter 30 Min)', '🍖 Fleisch', '🐟 Fisch',
+  '🇮🇹 Italienisch', '🇨🇳 Asiatisch', '🇩🇪 Deutsch', '🌶️ Scharf', '🍰 Süß',
+  '🥗 Gesund', '💪 Low Carb', '🎉 Party-geeignet', '👶 Kinderfreundlich', '🍳 Meal Prep'
+];
+
+const RecipeApp = () => {
+  const [recipes, setRecipes] = useState([]);
+  const [shoppingList, setShoppingList] = useState([]);
+  const [mealPlans, setMealPlans] = useState([]);
+  // Hierarchical category structure: Main categories with subcategories
+  // Version 2: Sehr detailliert für Back-Enthusiasten (16 Hauptkategorien, ~90 Unterkategorien)
+  const [categoryStructure] = useState({
+    // Vorspeisen
+    'Vorspeisen 🥗': [
+      'Suppen',
+      'Salate',
+      'Kalte Vorspeisen',
+      'Warme Vorspeisen',
+      'Fingerfood & Appetizer',
+      'Dips & Aufstriche'
+    ],
+
+    // Hauptgerichte
+    'Hauptspeisen 🍖': [
+      'Fleischgerichte',
+      'Fischgerichte', 
+      'Vegetarische Gerichte',
+      'Vegane Gerichte',
+      'Pasta & Nudeln',
+      'Pizza & Teigwaren',
+      'Reis & Getreide',
+      'Eintöpfe & Currys'
+    ],
+
+    // Beilagen
+    'Beilagen 🥔': [
+      'Kartoffeln',
+      'Gemüse',
+      'Reis & Getreide',
+      'Salate',
+      'Saucen'
+    ],
+
+    // KUCHEN & TORTEN - Detailliert
+    'Kuchen & Torten 🎂': [
+      'Rührkuchen',
+      'Blechkuchen',
+      'Motivtorten',
+      'Obstkuchen',
+      'Käsekuchen',
+      'Schokokuchen',
+      'Biskuit & Rouladen',
+      'Gugelhupf & Bundt Cakes'
+    ],
+
+    // TARTES & PIES
+    'Tartes & Pies 🥧': [
+      'Obsttartes',
+      'Cremetartes',
+      'Quiche (herzhaft)',
+      'Galettes',
+      'Pies (amerikanisch)',
+      'Flammkuchen'
+    ],
+
+    // GEBÄCK - Klein & Fein
+    'Gebäck & Kleinigkeiten 🥐': [
+      'Croissants',
+      'Blätterteig-Gebäck',
+      'Plunder & Teilchen',
+      'Eclairs & Windbeutel',
+      'Donuts & Krapfen',
+      'Berliner & Gefülltes',
+      'Muffins & Cupcakes'
+    ],
+
+    // KEKSE & KONFEKT
+    'Kekse & Konfekt 🍪': [
+      'Butterkekse',
+      'Mürbeteig-Kekse',
+      'Doppelkekse',
+      'Makronen',
+      'Amerikaner & Cookies',
+      'Weihnachtsplätzchen',
+      'Brownies & Blondies',
+      'Riegel & Schnitten'
+    ],
+
+    // HEFEGEBÄCK
+    'Hefegebäck & Brioche 🥖': [
+      'Brioche',
+      'Zimtschnecken',
+      'Hefezopf',
+      'Süße Brötchen',
+      'Buchteln',
+      'Babka',
+      'Stollen',
+      'Panettone'
+    ],
+
+    // WAFFELN & PANCAKES - Eigene Kategorie!
+    'Waffeln & Pancakes 🧇': [
+      'Belgische Waffeln',
+      'Lütticher Waffeln',
+      'Herzhafte Waffeln',
+      'Amerikanische Pancakes',
+      'Buttermilk Pancakes',
+      'Crêpes',
+      'Dutch Baby',
+      'Blinis'
+    ],
+
+    // CREMES & DESSERTS
+    'Cremes & Desserts 🍮': [
+      'Tiramisu',
+      'Panna Cotta',
+      'Pudding',
+      'Mousse',
+      'Crème Brûlée',
+      'Schichtdesserts',
+      'Parfaits',
+      'Trifle'
+    ],
+
+    // EIS & GEFRORENES
+    'Eis & Gefrorenes 🍨': [
+      'Eiscreme',
+      'Sorbets',
+      'Frozen Yogurt',
+      'Nicecream',
+      'Granita',
+      'Semifreddo'
+    ],
+
+    // BROT & BRÖTCHEN
+    'Brot & Brötchen 🍞': [
+      'Weißbrot',
+      'Vollkornbrot',
+      'Sauerteigbrot',
+      'Brötchen',
+      'Baguette',
+      'Focaccia',
+      'Bagels',
+      'Fladenbrot'
+    ],
+
+    // GEWÜRZE & MISCHUNGEN - Für deine Kreationen!
+    'Gewürze & Mischungen 🌶️': [
+      'Gewürzmischungen',
+      'BBQ-Rubs',
+      'Curry-Pulver',
+      'Kräutermischungen',
+      'Salz-Variationen',
+      'Zucker-Variationen',
+      'Zimt-Zucker & Co',
+      'Chai- & Tee-Mischungen'
+    ],
+
+    // GRUNDREZEPTE & BASICS
+    'Grundrezepte & Basics 📋': [
+      'Teig-Grundrezepte',
+      'Basis-Cremes',
+      'Glasuren & Frostings',
+      'Füllungen',
+      'Sirup & Tränken',
+      'Marinaden',
+      'Würzsaucen',
+      'Aromatisierte Öle'
+    ],
+
+    // FRÜHSTÜCK
+    'Frühstück & Brunch 🍳': [
+      'Müsli & Granola',
+      'Porridge & Oats',
+      'Smoothie Bowls',
+      'Marmeladen',
+      'Aufstriche',
+      'Eiergerichte'
+    ],
+
+    // Snacks
+    'Snacks 🍿': [
+      'Fingerfood',
+      'Energy Balls',
+      'Chips & Crackers',
+      'Popcorn-Varianten'
+    ],
+
+    // Getränke
+    'Getränke ☕': [
+      'Heiße Getränke',
+      'Kalte Getränke',
+      'Smoothies',
+      'Cocktails',
+      'Liköre & Sirup'
+    ],
+
+    // Saucen
+    'Saucen & Condiments 🥫': [
+      'Basis-Saucen',
+      'Grillsaucen',
+      'Pesto',
+      'Salsa',
+      'Chutneys'
+    ]
+  });
+
+  // Flatten categories for backward compatibility (stores as "Main > Sub")
+  const [categories, setCategories] = useState(() => {
+    const flat = [];
+    Object.entries(categoryStructure).forEach(([main, subs]) => {
+      subs.forEach(sub => flat.push(`${main} > ${sub}`));
+    });
+    return flat;
+  });
+  const [view, setView] = useState<'home' | 'detail' | 'add' | 'edit' | 'shopping' | 'cooking' | 'mealplan'>('home');
+  const [selectedRecipe, setSelectedRecipe] = useState(null);
+  const [editingRecipe, setEditingRecipe] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [servings, setServings] = useState(4);
+  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState({ category: '', maxTime: '', difficulty: '', favorite: undefined });
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortBy, setSortBy] = useState<'title' | 'date' | 'rating' | 'time'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [isListening, setIsListening] = useState(false);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showRecipeSelector, setShowRecipeSelector] = useState(false);
+  const [selectedDateForMealPlan, setSelectedDateForMealPlan] = useState<string | null>(null);
+  const [selectedMealTypeForMealPlan, setSelectedMealTypeForMealPlan] = useState<string | null>(null);
+
+  const [user, setUser] = useState(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Data Service Instance
+  const dataService = useMemo(() => {
+    if (!supabase) return null;
+    return new RecipeDataService(supabase, user, (msg) => setError(msg));
+  }, [user]);
+
+  // Beobachte Auth-Status und lade Daten beim User-Wechsel
+  useEffect(() => {
+    let sub: any = null;
+
+    const init = async () => {
+      if (supabase) {
+        try {
+          const {
+            data: { user: currentUser }
+          } = await supabase.auth.getUser();
+          setUser(currentUser ?? null);
+        } catch (e) {
+          // ignore
+        }
+
+        sub = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+          setUser(session?.user ?? null);
+        });
+      }
+      loadData();
+    };
+
+    init();
+
+    return () => {
+      if (sub && typeof sub.unsubscribe === 'function') sub.unsubscribe();
+    };
+  }, []);
+
+  // Reload data when user changes
+  useEffect(() => {
+    if (dataService && !editingRecipe) {
+      loadData();
+    }
+  }, [user]);
+
+  // Debug: Zeige aktuelle View (muss vor conditional returns sein!)
+  useEffect(() => {
+    console.log('Aktuelle View:', view);
+    console.log('editingRecipe:', editingRecipe);
+  }, [view, editingRecipe]);
+
+  const kvKey = (baseKey) => (user ? `user:${user.id}:${baseKey}` : baseKey);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      if (dataService) {
+        // Use improved data service
+        const data = await dataService.loadAll();
+        if (data.recipes) setRecipes(data.recipes);
+        if (data.shoppingList) setShoppingList(data.shoppingList);
+        if (data.categories && data.categories.length > 0) {
+          setCategories(data.categories);
+        }
+        if (data.mealPlans) setMealPlans(data.mealPlans);
+      } else {
+        // Fallback to original method
+        if (isSupabaseConfigured && supabase) {
+          try {
+            const rKey = kvKey('recipes');
+            const sKey = kvKey('shopping-list');
+            const cKey = kvKey('categories');
+
+            const { data: recipesRow, error: recipesError } = await supabase
+              .from('kv')
+              .select('value')
+              .eq('key', rKey)
+              .single();
+
+            if (!recipesError && recipesRow?.value) {
+              setRecipes(recipesRow.value);
+            }
+
+            const { data: shoppingRow, error: shoppingError } = await supabase
+              .from('kv')
+              .select('value')
+              .eq('key', sKey)
+              .single();
+
+            if (!shoppingError && shoppingRow?.value) {
+              setShoppingList(shoppingRow.value);
+            }
+
+            const { data: categoriesRow, error: categoriesError } = await supabase
+              .from('kv')
+              .select('value')
+              .eq('key', cKey)
+              .single();
+
+            if (!categoriesError && categoriesRow?.value) {
+              setCategories(categoriesRow.value);
+            }
+          } catch (err) {
+            console.log('Supabase load failed, falling back to localStorage', err);
+          }
+        }
+
+        // Fallback / localStorage
+        const recipesData = localStorage.getItem('recipes');
+        const shoppingData = localStorage.getItem('shopping-list');
+        const categoriesData = localStorage.getItem('categories');
+
+        if (recipesData) {
+          setRecipes(JSON.parse(recipesData));
+        }
+        if (shoppingData) {
+          setShoppingList(JSON.parse(shoppingData));
+        }
+        if (categoriesData) {
+          setCategories(JSON.parse(categoriesData));
+        }
+        const mealPlansData = localStorage.getItem('meal-plans');
+        if (mealPlansData) {
+          setMealPlans(JSON.parse(mealPlansData));
+        }
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden der Daten:', error);
+      setError('Fehler beim Laden der Daten');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signOut = async () => {
+    if (!supabase) return;
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Sign out error', err);
+    } finally {
+      setUser(null);
+      // reload fallback data from localStorage
+      loadData();
+    }
+  };
+
+  // Improved save functions with DataService and optimistic updates
+  const saveRecipes = useCallback(async (newRecipes) => {
+    setRecipes(newRecipes); // Optimistic update
+    
+    if (dataService) {
+      await dataService.saveRecipes(newRecipes);
+    } else {
+      // Fallback to original method
+      try {
+        localStorage.setItem('recipes', JSON.stringify(newRecipes));
+        if (isSupabaseConfigured && supabase) {
+          try {
+            await supabase.from('kv').upsert({ key: kvKey('recipes'), value: newRecipes });
+          } catch (err) {
+            console.error('Supabase save error (recipes):', err);
+          }
+        }
+      } catch (error) {
+        console.error('Fehler beim Speichern:', error);
+        setError('Fehler beim Speichern der Rezepte');
+      }
+    }
+  }, [dataService]);
+
+  const saveShoppingList = useCallback(async (newList) => {
+    setShoppingList(newList); // Optimistic update
+    
+    if (dataService) {
+      await dataService.saveShoppingList(newList);
+    } else {
+      // Fallback to original method
+      try {
+        localStorage.setItem('shopping-list', JSON.stringify(newList));
+        if (isSupabaseConfigured && supabase) {
+          try {
+            await supabase.from('kv').upsert({ key: kvKey('shopping-list'), value: newList });
+          } catch (err) {
+            console.error('Supabase save error (shopping-list):', err);
+          }
+        }
+      } catch (error) {
+        console.error('Fehler beim Speichern:', error);
+        setError('Fehler beim Speichern der Einkaufsliste');
+      }
+    }
+  }, [dataService]);
+
+  const saveCategories = useCallback(async (newCategories) => {
+    setCategories(newCategories); // Optimistic update
+    
+    if (dataService) {
+      await dataService.saveCategories(newCategories);
+    } else {
+      // Fallback to original method
+      try {
+        localStorage.setItem('categories', JSON.stringify(newCategories));
+        if (isSupabaseConfigured && supabase) {
+          try {
+            await supabase.from('kv').upsert({ key: kvKey('categories'), value: newCategories });
+          } catch (err) {
+            console.error('Supabase save error (categories):', err);
+          }
+        }
+      } catch (error) {
+        console.error('Fehler beim Speichern der Kategorien:', error);
+        setError('Fehler beim Speichern der Kategorien');
+      }
+    }
+  }, [dataService]);
+
+  // Meal Plan functions
+  const saveMealPlans = useCallback(async (newMealPlans) => {
+    setMealPlans(newMealPlans); // Optimistic update
+    
+    if (dataService) {
+      await dataService.saveMealPlans(newMealPlans);
+    } else {
+      try {
+        localStorage.setItem('meal-plans', JSON.stringify(newMealPlans));
+        if (isSupabaseConfigured && supabase) {
+          try {
+            await supabase.from('kv').upsert({ key: kvKey('meal-plans'), value: newMealPlans });
+          } catch (err) {
+            console.error('Supabase save error (meal-plans):', err);
+          }
+        }
+      } catch (error) {
+        console.error('Fehler beim Speichern der Wochenpläne:', error);
+        setError('Fehler beim Speichern der Wochenpläne');
+      }
+    }
+  }, [dataService]);
+
+  const addMealPlan = useCallback((date: string, recipeId: string, mealType: 'Frühstück' | 'Mittagessen' | 'Abendessen' | 'Snack') => {
+    const newPlan = {
+      id: generateId(),
+      date,
+      recipeId,
+      mealType
+    };
+    const updated = [...mealPlans.filter(p => !(p.date === date && p.mealType === mealType)), newPlan];
+    saveMealPlans(updated);
+  }, [mealPlans, saveMealPlans]);
+
+  const removeMealPlan = useCallback((id: string) => {
+    const updated = mealPlans.filter(p => p.id !== id);
+    saveMealPlans(updated);
+  }, [mealPlans, saveMealPlans]);
+
+  const addWeekToShoppingList = useCallback(() => {
+    const weekRecipes = mealPlans.map(plan => {
+      const recipe = recipes.find(r => r.id === plan.recipeId);
+      return recipe;
+    }).filter(Boolean);
+
+    weekRecipes.forEach(recipe => {
+      if (recipe) {
+        const ingredientStrings = Array.isArray(recipe.ingredients[0]) && typeof recipe.ingredients[0] === 'object' && 'name' in recipe.ingredients[0]
+          ? (recipe.ingredients as Array<{ amount: string; unit: string; name: string }>).map(ing => `${ing.amount} ${ing.unit} ${ing.name}`)
+          : recipe.ingredients as string[];
+        
+        const newItems = ingredientStrings.map(text => ({
+          id: generateId(),
+          text,
+          checked: false,
+          recipeTitle: recipe.title
+        }));
+        
+        const updatedList = [...shoppingList, ...newItems];
+        const merged = mergeIngredients(updatedList);
+        saveShoppingList(merged);
+      }
+    });
+    
+    alert('Alle Zutaten der Woche zur Einkaufsliste hinzugefügt! 🛒');
+  }, [mealPlans, recipes, shoppingList, saveShoppingList]);
+
+  const addCategory = () => {
+    if (newCategoryName.trim() && !categories.includes(newCategoryName.trim())) {
+      const updated = [...categories, newCategoryName.trim()];
+      saveCategories(updated);
+      setNewCategoryName('');
+    }
+  };
+
+  const editCategory = (oldName, newName) => {
+    if (newName.trim() && newName.trim() !== oldName) {
+      const updated = categories.map(cat => cat === oldName ? newName.trim() : cat);
+      saveCategories(updated);
+      // Aktualisiere auch alle Rezepte mit dieser Kategorie
+      const updatedRecipes = recipes.map(recipe => 
+        recipe.category === oldName ? { ...recipe, category: newName.trim() } : recipe
+      );
+      saveRecipes(updatedRecipes);
+      setEditingCategory(null);
+    }
+  };
+
+  const deleteCategory = (categoryName) => {
+    if (confirm(`Kategorie "${categoryName}" wirklich löschen? Rezepte mit dieser Kategorie behalten sie, aber die Kategorie wird aus der Liste entfernt.`)) {
+      const updated = categories.filter(cat => cat !== categoryName);
+      saveCategories(updated);
+    }
+  };
+
+  // Use improved mergeIngredients from utils (already imported)
+
+  const addToShoppingList = (recipe, customServings) => {
+    const factor = customServings / recipe.servings;
+    const newItems = recipe.ingredients.map(ing => ({
+      id: Date.now() + Math.random(),
+      text: `${parseFloat((parseFloat(ing.amount) * factor).toFixed(1))} ${ing.unit} ${ing.name}`,
+      checked: false,
+      recipeTitle: recipe.title
+    }));
+    
+    const updatedList = [...shoppingList, ...newItems];
+    const merged = mergeIngredients(updatedList);
+    saveShoppingList(merged);
+    alert('Zutaten zur Einkaufsliste hinzugefügt! 🛒');
+  };
+
+  const toggleShoppingItem = (id) => {
+    const updated = shoppingList.map(item => 
+      item.id === id ? { ...item, checked: !item.checked } : item
+    );
+    saveShoppingList(updated);
+  };
+
+  const deleteShoppingItem = (id) => {
+    const updated = shoppingList.filter(item => item.id !== id);
+    saveShoppingList(updated);
+  };
+
+  const updateShoppingItem = (id: string, newText: string) => {
+    const updated = shoppingList.map(item => 
+      item.id === id ? { ...item, text: newText } : item
+    );
+    saveShoppingList(updated);
+  };
+
+  const clearCheckedItems = () => {
+    const updated = shoppingList.filter(item => !item.checked);
+    saveShoppingList(updated);
+  };
+
+  const shareShoppingList = () => {
+    const uncheckedItems = shoppingList.filter(item => !item.checked);
+    if (uncheckedItems.length === 0) {
+      alert('Die Einkaufsliste ist leer oder alle Items sind bereits abgehakt!');
+      return;
+    }
+    
+    const listText = uncheckedItems.map(item => `• ${item.text}`).join('\n');
+    const shareText = `🛒 Einkaufsliste\n\n${listText}`;
+    
+    // Versuche Web Share API, sonst Fallback
+    if (navigator.share) {
+      navigator.share({
+        title: 'Einkaufsliste',
+        text: shareText
+      }).catch(err => {
+        // Fallback zu WhatsApp/Text
+        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+        window.open(whatsappUrl, '_blank');
+      });
+    } else {
+      // Fallback: WhatsApp Link
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+      window.open(whatsappUrl, '_blank');
+    }
+  };
+
+  const deleteRecipe = (id) => {
+    if (confirm('Rezept wirklich löschen?')) {
+      const updated = recipes.filter(r => r.id !== id);
+      saveRecipes(updated);
+      setView('home');
+    }
+  };
+
+  // Improved favorite toggle with useCallback
+  const toggleFavorite = useCallback((id) => {
+    const updated = recipes.map(r => {
+      if (r.id === id) {
+        const newFavorite = !(r.favorite || r.isFavorite);
+        return { ...r, favorite: newFavorite, isFavorite: newFavorite };
+      }
+      return r;
+    });
+    saveRecipes(updated);
+    if (selectedRecipe?.id === id) {
+      const newFavorite = !(selectedRecipe.favorite || selectedRecipe.isFavorite);
+      setSelectedRecipe({ ...selectedRecipe, favorite: newFavorite, isFavorite: newFavorite });
+    }
+  }, [recipes, selectedRecipe]);
+
+  // Improved rating update with useCallback
+  const updateRecipeRating = useCallback((id, rating) => {
+    const updated = recipes.map(r => 
+      r.id === id ? { ...r, rating } : r
+    );
+    saveRecipes(updated);
+    if (selectedRecipe?.id === id) {
+      setSelectedRecipe({ ...selectedRecipe, rating });
+    }
+  }, [recipes, selectedRecipe]);
+
+  const updateRecipeNotes = (id, notes) => {
+    const updated = recipes.map(r => 
+      r.id === id ? { ...r, notes } : r
+    );
+    saveRecipes(updated);
+    if (selectedRecipe?.id === id) {
+      setSelectedRecipe({ ...selectedRecipe, notes });
+    }
+  };
+
+  // Sprachsteuerung
+  const speakText = (text) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'de-DE';
+      utterance.rate = 0.9;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const startVoiceControl = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert('Spracherkennung wird in deinem Browser nicht unterstützt.');
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'de-DE';
+    recognition.continuous = true;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+      
+      if (transcript.includes('nächster schritt') || transcript.includes('weiter')) {
+        if (selectedRecipe && currentStepIndex < selectedRecipe.steps.length - 1) {
+          const newIndex = currentStepIndex + 1;
+          setCurrentStepIndex(newIndex);
+          speakText(`Schritt ${newIndex + 1}: ${selectedRecipe.steps[newIndex]}`);
+        } else {
+          speakText('Das war der letzte Schritt.');
+        }
+      } else if (transcript.includes('vorheriger schritt') || transcript.includes('zurück')) {
+        if (currentStepIndex > 0) {
+          const newIndex = currentStepIndex - 1;
+          setCurrentStepIndex(newIndex);
+          speakText(`Schritt ${newIndex + 1}: ${selectedRecipe.steps[newIndex]}`);
+        }
+      } else if (transcript.includes('wiederholen') || transcript.includes('nochmal')) {
+        speakText(`Schritt ${currentStepIndex + 1}: ${selectedRecipe.steps[currentStepIndex]}`);
+      } else if (transcript.includes('stopp') || transcript.includes('stop')) {
+        recognition.stop();
+      }
+    };
+
+    recognition.start();
+  };
+
+  // Improved filtering and sorting with utility functions and memoization
+  const filteredRecipes = useMemo(() => {
+    const filtered = searchRecipes(recipes, searchTerm, {
+      category: filters.category,
+      maxTime: filters.maxTime,
+      difficulty: filters.difficulty,
+      favorite: filters.favorite
+    });
+    return sortRecipes(filtered, sortBy, sortOrder);
+  }, [recipes, searchTerm, filters, sortBy, sortOrder]);
+
+  // Home View
+  const HomeView = () => (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
+      <div className="max-w-4xl mx-auto p-4 pb-24">
+        <header className="mb-8 pt-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <ChefHat className="w-10 h-10 text-orange-600" />
+              <h1 className="text-3xl font-bold text-gray-800">Meine Rezepte</h1>
+            </div>
+
+            <div className="relative">
+              {user ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="flex items-center gap-2 px-3 py-2 bg-white rounded-xl border-2 border-gray-200 text-gray-700 font-medium"
+                  >
+                    <Users className="w-5 h-5" />
+                    <span className="text-sm">{user.email?.split('@')[0]}</span>
+                  </button>
+
+                  {showUserMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border">
+                      <div className="p-3 text-sm text-gray-700">{user.email}</div>
+                      <div className="border-t" />
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          signOut();
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                      >
+                        Abmelden
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          </div>
+          
+          <div className="relative mb-4">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Rezepte durchsuchen..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-lg"
+            />
+          </div>
+
+          <div className="flex gap-2 mb-4 flex-wrap">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border-2 border-gray-200 text-gray-700 font-medium active:scale-95 transition"
+            >
+              <SlidersHorizontal className="w-5 h-5" />
+              Filter
+              {(filters.category || filters.maxTime || filters.difficulty || filters.favorite) && (
+                <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+              )}
+            </button>
+            <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border-2 border-gray-200">
+              <label className="text-sm font-medium text-gray-700">Sortieren:</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="border-0 focus:outline-none text-sm font-medium text-gray-700 cursor-pointer"
+              >
+                <option value="date">Datum</option>
+                <option value="title">Titel</option>
+                <option value="rating">Bewertung</option>
+                <option value="time">Zeit</option>
+              </select>
+              <button
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                className="text-gray-600 hover:text-gray-800"
+                title={sortOrder === 'asc' ? 'Aufsteigend' : 'Absteigend'}
+              >
+                {sortOrder === 'asc' ? '↑' : '↓'}
+              </button>
+            </div>
+            <button
+              onClick={() => setShowCategoryManager(!showCategoryManager)}
+              className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border-2 border-gray-200 text-gray-700 font-medium active:scale-95 transition"
+            >
+              <Settings className="w-5 h-5" />
+              Kategorien
+            </button>
+          </div>
+
+          {showCategoryManager && (
+            <div className="mt-4 bg-white rounded-2xl p-4 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-gray-800">Kategorien-Struktur</h3>
+                <button
+                  onClick={() => setShowCategoryManager(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="space-y-4 mb-4 max-h-96 overflow-y-auto">
+                {Object.entries(categoryStructure).map(([mainCat, subCats]) => (
+                  <div key={mainCat} className="border-b border-gray-200 pb-3 last:border-0">
+                    <div className="font-bold text-gray-800 mb-2 text-lg">{mainCat}</div>
+                    <div className="pl-4 space-y-1">
+                      {subCats.map((subCat) => {
+                        const fullCat = `${mainCat} > ${subCat}`;
+                        return (
+                          <div key={subCat} className="flex items-center gap-2 p-1 text-sm text-gray-600">
+                            <span className="flex-1">• {subCat}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="text-xs text-gray-500 mt-4 p-3 bg-gray-50 rounded-lg">
+                <strong>Hinweis:</strong> Die Kategorien-Struktur ist vordefiniert. Um Kategorien zu ändern, bearbeite den Code in <code>categoryStructure</code>.
+              </div>
+            </div>
+          )}
+
+          {showFilters && (
+            <div className="mt-4 bg-white rounded-2xl p-4 shadow-lg space-y-3">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Kategorie</label>
+                <select
+                  value={filters.category}
+                  onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+                  className="w-full px-4 py-2 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none"
+                >
+                  <option value="">Alle</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Max. Zubereitungszeit</label>
+                <select
+                  value={filters.maxTime}
+                  onChange={(e) => setFilters({ ...filters, maxTime: e.target.value })}
+                  className="w-full px-4 py-2 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none"
+                >
+                  <option value="">Egal</option>
+                  <option value="15">Bis 15 Min</option>
+                  <option value="30">Bis 30 Min</option>
+                  <option value="60">Bis 60 Min</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Schwierigkeit</label>
+                <select
+                  value={filters.difficulty}
+                  onChange={(e) => setFilters({ ...filters, difficulty: e.target.value })}
+                  className="w-full px-4 py-2 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none"
+                >
+                  <option value="">Alle</option>
+                  <option value="Einfach">Einfach</option>
+                  <option value="Mittel">Mittel</option>
+                  <option value="Schwer">Schwer</option>
+                </select>
+              </div>
+              <div>
+                <label className="flex items-center gap-2 text-sm font-bold text-gray-700 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={filters.favorite || false}
+                    onChange={(e) => setFilters({ ...filters, favorite: e.target.checked || undefined })}
+                    className="w-4 h-4 text-orange-500 rounded"
+                  />
+                  Nur Favoriten
+                </label>
+              </div>
+              <button
+                onClick={() => setFilters({ category: '', maxTime: '', difficulty: '', favorite: undefined })}
+                className="w-full py-2 text-orange-600 font-medium"
+              >
+                Filter zurücksetzen
+              </button>
+            </div>
+          )}
+        </header>
+
+        {filteredRecipes.length === 0 ? (
+          <div className="text-center py-16">
+            <ChefHat className="w-20 h-20 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 text-lg mb-2">Keine Rezepte gefunden</p>
+            <p className="text-gray-400">{recipes.length === 0 ? 'Füge dein erstes Rezept hinzu!' : 'Versuche andere Filter'}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredRecipes.map(recipe => (
+              <div
+                key={recipe.id}
+                onClick={() => {
+                  setSelectedRecipe(recipe);
+                  setServings(recipe.servings);
+                  setCurrentStepIndex(0);
+                  setView('detail');
+                }}
+                className="bg-white rounded-3xl shadow-lg overflow-hidden cursor-pointer transform transition hover:scale-105 active:scale-95 relative"
+              >
+                {(recipe.isFavorite || recipe.favorite) && (
+                  <div className="absolute top-3 right-3 z-10">
+                    <Star className="w-6 h-6 fill-yellow-400 text-yellow-400" />
+                  </div>
+                )}
+                {recipe.image && (
+                  <div className="h-48 overflow-hidden bg-gray-100">
+                    <img src={recipe.image} alt={recipe.title} className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <div className="p-5">
+                  <h3 className="text-xl font-bold text-gray-800 mb-3">{recipe.title}</h3>
+                  <div className="flex gap-4 text-sm text-gray-600 mb-3 flex-wrap">
+                    <div className="flex items-center gap-1">
+                      <Users className="w-4 h-4" />
+                      <span>{recipe.servings} Portionen</span>
+                    </div>
+                    {recipe.time && (
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        <span>{recipe.time} Min</span>
+                      </div>
+                    )}
+                    {recipe.difficulty && (
+                      <div className="flex items-center gap-1">
+                        <SlidersHorizontal className="w-4 h-4" />
+                        <span>{recipe.difficulty}</span>
+                      </div>
+                    )}
+                  </div>
+                  {recipe.rating > 0 && (
+                    <div className="flex gap-1 mb-3">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={`w-4 h-4 ${star <= recipe.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    {recipe.category && (
+                      <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                        {recipe.category}
+                      </span>
+                    )}
+                    {recipe.date && (
+                      <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {new Date(recipe.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                      </span>
+                    )}
+                  </div>
+                  {recipe.tags && recipe.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {recipe.tags.map((tag, idx) => (
+                        <span key={idx} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <BottomNav currentView="home" />
+    </div>
+  );
+
+  // Detail View
+  const DetailView = () => {
+    if (!selectedRecipe) return null;
+    
+    const factor = servings / selectedRecipe.servings;
+    const [showNotes, setShowNotes] = useState(false);
+    const [editedNotes, setEditedNotes] = useState(selectedRecipe.notes || '');
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 pb-8">
+        <div className="max-w-3xl mx-auto">
+          {selectedRecipe.image && (
+            <div className="h-64 overflow-hidden bg-gray-100">
+              <img src={selectedRecipe.image} alt={selectedRecipe.title} className="w-full h-full object-cover" />
+            </div>
+          )}
+          
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <button
+                onClick={() => setView('home')}
+                className="flex items-center gap-2 text-orange-600 font-medium text-lg"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                Zurück
+              </button>
+              <button
+                onClick={() => {
+                  console.log('Bearbeiten geklickt', selectedRecipe);
+                  if (selectedRecipe) {
+                    setEditingRecipe(selectedRecipe);
+                    setView('edit');
+                    console.log('View auf edit gesetzt, editingRecipe:', selectedRecipe);
+                  } else {
+                    alert('Fehler: Rezept nicht gefunden');
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xl font-medium active:scale-95 transition shadow-lg hover:bg-blue-600"
+              >
+                <Edit2 className="w-5 h-5" />
+                Bearbeiten
+              </button>
+            </div>
+
+            <div className="flex justify-between items-start mb-4">
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-800 flex-1">{selectedRecipe.title}</h1>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => toggleFavorite(selectedRecipe.id)}
+                  className={`p-3 rounded-full transition ${
+                    selectedRecipe.isFavorite 
+                      ? 'bg-yellow-100 text-yellow-600' 
+                      : 'bg-gray-100 text-gray-400'
+                  }`}
+                >
+                  <Star className={`w-5 h-5 ${selectedRecipe.isFavorite ? 'fill-yellow-400' : ''}`} />
+                </button>
+                <button
+                  onClick={() => deleteRecipe(selectedRecipe.id)}
+                  className="p-3 text-red-500 hover:bg-red-50 rounded-full transition"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mb-4">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => updateRecipeRating(selectedRecipe.id, star)}
+                  className="transition active:scale-110"
+                >
+                  <Star
+                    className={`w-7 h-7 ${
+                      star <= (selectedRecipe.rating || 0)
+                        ? 'fill-yellow-400 text-yellow-400'
+                        : 'text-gray-300'
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-6">
+              {selectedRecipe.category && (
+                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                  {selectedRecipe.category}
+                </span>
+              )}
+              {selectedRecipe.difficulty && (
+                <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                  {selectedRecipe.difficulty}
+                </span>
+              )}
+              {selectedRecipe.date && (
+                <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
+                  {new Date(selectedRecipe.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                </span>
+              )}
+              {selectedRecipe.tags && selectedRecipe.tags.map((tag, idx) => (
+                <span key={idx} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
+                  {tag}
+                </span>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setShowNotes(!showNotes)}
+              className="w-full mb-6 px-4 py-3 bg-white rounded-2xl shadow-md text-left font-medium text-gray-700 flex items-center justify-between text-lg"
+            >
+              <span>📝 Eigene Notizen {selectedRecipe.notes && '✓'}</span>
+              <span>{showNotes ? '▲' : '▼'}</span>
+            </button>
+
+            {showNotes && (
+              <div className="bg-white rounded-3xl p-6 shadow-lg mb-6">
+                <textarea
+                  value={editedNotes}
+                  onChange={(e) => setEditedNotes(e.target.value)}
+                  placeholder="z.B. 'mehr Salz', '10 Min länger backen'..."
+                  rows="4"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none resize-none mb-3 text-lg"
+                />
+                <button
+                  onClick={() => {
+                    updateRecipeNotes(selectedRecipe.id, editedNotes);
+                    setShowNotes(false);
+                  }}
+                  className="w-full bg-orange-500 text-white py-3 rounded-xl font-medium active:scale-95 transition text-lg"
+                >
+                  Notizen speichern
+                </button>
+              </div>
+            )}
+
+            <div className="bg-white rounded-3xl p-6 shadow-lg mb-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">Portionen</h2>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setServings(Math.max(1, servings - 1))}
+                    className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 font-bold text-2xl flex items-center justify-center active:scale-95"
+                  >
+                    -
+                  </button>
+                  <span className="text-3xl font-bold text-gray-800 w-16 text-center">{servings}</span>
+                  <button
+                    onClick={() => setServings(servings + 1)}
+                    className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 font-bold text-2xl flex items-center justify-center active:scale-95"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Zutaten</h3>
+              <div className="space-y-3 mb-6">
+                {selectedRecipe.ingredients.map((ing, idx) => (
+                  <div key={idx} className="flex justify-between items-center py-3 border-b border-gray-100">
+                    <span className="text-gray-700 text-lg">{ing.name}</span>
+                    <span className="font-semibold text-gray-800 text-lg">
+                      {parseFloat((parseFloat(ing.amount) * factor).toFixed(1))} {ing.unit}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setCurrentStepIndex(0);
+                    setView('cooking');
+                  }}
+                  className="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 active:scale-95 transition shadow-lg"
+                >
+                  <Play className="w-5 h-5" />
+                  Kochansicht
+                </button>
+                <button
+                  onClick={() => addToShoppingList(selectedRecipe, servings)}
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 active:scale-95 transition shadow-lg"
+                >
+                  <ShoppingCart className="w-5 h-5" />
+                  Zur Einkaufsliste
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl p-6 shadow-lg mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-800">Zubereitung</h3>
+                <button
+                  onClick={startVoiceControl}
+                  className={`p-3 rounded-full transition ${
+                    isListening 
+                      ? 'bg-red-500 text-white animate-pulse' 
+                      : 'bg-orange-100 text-orange-600'
+                  }`}
+                  title="Sprachsteuerung aktivieren"
+                >
+                  <Mic className="w-5 h-5" />
+                </button>
+              </div>
+              {isListening && (
+                <div className="mb-4 p-3 bg-orange-50 rounded-xl text-sm text-orange-800">
+                  🎤 Sage: "Nächster Schritt", "Zurück", "Wiederholen" oder "Stopp"
+                </div>
+              )}
+              <div className="space-y-4">
+                {selectedRecipe.steps.map((step, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`flex gap-4 p-4 rounded-xl transition ${
+                      idx === currentStepIndex 
+                        ? 'bg-orange-50 border-2 border-orange-300' 
+                        : 'bg-gray-50'
+                    }`}
+                  >
+                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                      idx === currentStepIndex 
+                        ? 'bg-orange-500 text-white' 
+                        : 'bg-gray-300 text-gray-600'
+                    }`}>
+                      {idx + 1}
+                    </div>
+                    <p className="text-gray-700 pt-1 flex-1 text-lg">{step}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setCurrentStepIndex(Math.max(0, currentStepIndex - 1))}
+                  disabled={currentStepIndex === 0}
+                  className="flex-1 py-4 bg-gray-200 text-gray-700 rounded-xl font-medium disabled:opacity-50 active:scale-95 transition text-lg"
+                >
+                  ← Zurück
+                </button>
+                <button
+                  onClick={() => {
+                    speakText(`Schritt ${currentStepIndex + 1}: ${selectedRecipe.steps[currentStepIndex]}`);
+                  }}
+                  className="flex-1 py-4 bg-blue-500 text-white rounded-xl font-medium active:scale-95 transition flex items-center justify-center gap-2 text-lg"
+                >
+                  <Mic className="w-4 h-4" />
+                  Vorlesen
+                </button>
+                <button
+                  onClick={() => setCurrentStepIndex(Math.min(selectedRecipe.steps.length - 1, currentStepIndex + 1))}
+                  disabled={currentStepIndex === selectedRecipe.steps.length - 1}
+                  className="flex-1 py-4 bg-orange-500 text-white rounded-xl font-medium disabled:opacity-50 active:scale-95 transition text-lg"
+                >
+                  Weiter →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Cooking View - Große, mobile-optimierte Kochansicht
+  const CookingView = () => {
+    if (!selectedRecipe) return null;
+    
+    const factor = servings / selectedRecipe.servings;
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
+        <div className="max-w-2xl mx-auto p-4 pb-8">
+          <button
+            onClick={() => setView('detail')}
+            className="flex items-center gap-2 text-orange-600 mb-4 font-medium text-lg"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Zurück zur Übersicht
+          </button>
+
+          <div className="bg-white rounded-3xl p-6 shadow-lg mb-6">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4 text-center">{selectedRecipe.title}</h1>
+            
+            <div className="flex items-center justify-center gap-6 mb-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-gray-800">{servings}</div>
+                <div className="text-sm text-gray-600">Portionen</div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setServings(Math.max(1, servings - 1))}
+                  className="w-14 h-14 rounded-full bg-orange-100 text-orange-600 font-bold text-2xl flex items-center justify-center active:scale-95"
+                >
+                  -
+                </button>
+                <button
+                  onClick={() => setServings(servings + 1)}
+                  className="w-14 h-14 rounded-full bg-orange-100 text-orange-600 font-bold text-2xl flex items-center justify-center active:scale-95"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">Zutaten</h2>
+              <div className="space-y-3">
+                {selectedRecipe.ingredients.map((ing, idx) => (
+                  <div key={idx} className="flex justify-between items-center py-3 px-4 bg-gray-50 rounded-xl">
+                    <span className="text-gray-700 text-lg">{ing.name}</span>
+                    <span className="font-bold text-gray-800 text-xl">
+                      {parseFloat((parseFloat(ing.amount) * factor).toFixed(1))} {ing.unit}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={() => addToShoppingList(selectedRecipe, servings)}
+              className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 active:scale-95 transition shadow-lg mb-4"
+            >
+              <ShoppingCart className="w-5 h-5" />
+              Zur Einkaufsliste
+            </button>
+          </div>
+
+          <div className="bg-white rounded-3xl p-6 shadow-lg">
+            <div className="text-center mb-6">
+              <div className="text-6xl font-bold text-orange-500 mb-2">
+                {currentStepIndex + 1} / {selectedRecipe.steps.length}
+              </div>
+              <div className="text-sm text-gray-600">Schritt</div>
+            </div>
+
+            <div className="bg-orange-50 rounded-3xl p-8 mb-6 min-h-[300px] flex items-center justify-center">
+              <p className="text-2xl md:text-3xl text-gray-800 leading-relaxed text-center">
+                {selectedRecipe.steps[currentStepIndex]}
+              </p>
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                onClick={() => {
+                  if (currentStepIndex > 0) {
+                    setCurrentStepIndex(currentStepIndex - 1);
+                  }
+                }}
+                disabled={currentStepIndex === 0}
+                className="flex-1 py-5 bg-gray-200 text-gray-700 rounded-2xl font-bold disabled:opacity-50 active:scale-95 transition text-xl"
+              >
+                ← Zurück
+              </button>
+              <button
+                onClick={() => {
+                  speakText(`Schritt ${currentStepIndex + 1}: ${selectedRecipe.steps[currentStepIndex]}`);
+                }}
+                className="px-6 py-5 bg-blue-500 text-white rounded-2xl font-bold active:scale-95 transition"
+              >
+                <Mic className="w-6 h-6" />
+              </button>
+              <button
+                onClick={() => {
+                  if (currentStepIndex < selectedRecipe.steps.length - 1) {
+                    setCurrentStepIndex(currentStepIndex + 1);
+                  }
+                }}
+                disabled={currentStepIndex === selectedRecipe.steps.length - 1}
+                className="flex-1 py-5 bg-orange-500 text-white rounded-2xl font-bold disabled:opacity-50 active:scale-95 transition text-xl"
+              >
+                Weiter →
+              </button>
+            </div>
+
+            {currentStepIndex === selectedRecipe.steps.length - 1 && (
+              <div className="mt-6 p-4 bg-green-50 rounded-2xl text-center">
+                <p className="text-xl font-bold text-green-700">🎉 Fertig! Guten Appetit!</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Add/Edit Recipe View - Improved Version
+  const AddRecipeView = () => {
+    const isEditing = editingRecipe !== null;
+    const [title, setTitle] = useState('');
+    const [image, setImage] = useState('');
+    const [mainCategory, setMainCategory] = useState('');
+    const [subCategory, setSubCategory] = useState('');
+    const [recipeServings, setRecipeServings] = useState(4);
+    const [prepTime, setPrepTime] = useState(0);
+    const [cookTime, setCookTime] = useState(0);
+    const [difficulty, setDifficulty] = useState('');
+    const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [ingredients, setIngredients] = useState([{ amount: '', unit: '', name: '' }]);
+    const [steps, setSteps] = useState(['']);
+    const [recipeDate, setRecipeDate] = useState(new Date().toISOString().split('T')[0]);
+    const [quickIngredientInput, setQuickIngredientInput] = useState('');
+    const [newTagInput, setNewTagInput] = useState('');
+
+    // Aktualisiere States wenn editingRecipe sich ändert
+    useEffect(() => {
+      if (editingRecipe) {
+        setTitle(editingRecipe.title || '');
+        setImage(editingRecipe.image || '');
+        setRecipeServings(editingRecipe.servings || 4);
+        const timeValue = editingRecipe.time ? parseInt(editingRecipe.time) : 0;
+        const prep = editingRecipe.prepTime || 0;
+        const cook = editingRecipe.cookTime || 0;
+        setPrepTime(prep || (timeValue && !prep && !cook ? Math.floor(timeValue / 2) : 0));
+        setCookTime(cook || (timeValue && !prep && !cook ? Math.ceil(timeValue / 2) : 0));
+        setSelectedTags(editingRecipe.tags || []);
+        setIngredients(editingRecipe.ingredients && editingRecipe.ingredients.length > 0 ? editingRecipe.ingredients : [{ amount: '', unit: '', name: '' }]);
+        setSteps(editingRecipe.steps && editingRecipe.steps.length > 0 ? editingRecipe.steps : ['']);
+        const existingCategory = editingRecipe.category || '';
+        // Parse existing category (format: "Main > Sub" or just "Sub")
+        if (existingCategory.includes(' > ')) {
+          const [main, sub] = existingCategory.split(' > ');
+          setMainCategory(main);
+          setSubCategory(sub);
+        } else {
+          // Try to find which main category this belongs to
+          let found = false;
+          for (const [main, subs] of Object.entries(categoryStructure)) {
+            if (subs.includes(existingCategory)) {
+              setMainCategory(main);
+              setSubCategory(existingCategory);
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            setMainCategory('');
+            setSubCategory(existingCategory);
+          }
+        }
+        setDifficulty(editingRecipe.difficulty || '');
+        setRecipeDate(editingRecipe.date || new Date().toISOString().split('T')[0]);
+      } else {
+        // Reset für neues Rezept
+        setTitle('');
+        setImage('');
+        setRecipeServings(4);
+        setPrepTime(0);
+        setCookTime(0);
+        setSelectedTags([]);
+        setIngredients([{ amount: '', unit: '', name: '' }]);
+        setSteps(['']);
+        setMainCategory('');
+        setSubCategory('');
+        setDifficulty('');
+        setRecipeDate(new Date().toISOString().split('T')[0]);
+        setQuickIngredientInput('');
+        setNewTagInput('');
+      }
+    }, [editingRecipe]);
+
+    const handleImageUpload = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImage(reader.result);
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    const addIngredient = () => {
+      setIngredients([...ingredients, { amount: '', unit: '', name: '' }]);
+    };
+
+    const updateIngredient = (index, field, value) => {
+      const updated = [...ingredients];
+      updated[index][field] = value;
+      setIngredients(updated);
+    };
+
+    const removeIngredient = (index) => {
+      setIngredients(ingredients.filter((_, i) => i !== index));
+    };
+
+    // Quick ingredient add with smart parsing
+    const handleQuickIngredientAdd = () => {
+      if (!quickIngredientInput.trim()) return;
+      const parsed = parseIngredientInput(quickIngredientInput);
+      setIngredients([...ingredients, parsed]);
+      setQuickIngredientInput('');
+    };
+
+    const addStep = () => {
+      setSteps([...steps, '']);
+    };
+
+    const updateStep = (index, value) => {
+      const updated = [...steps];
+      updated[index] = value;
+      setSteps(updated);
+    };
+
+    const removeStep = (index) => {
+      setSteps(steps.filter((_, i) => i !== index));
+    };
+
+    // Drag and drop for steps
+    const handleStepDragStart = (e: any, index: number) => {
+      e.dataTransfer.setData('stepIndex', index.toString());
+    };
+
+    const handleStepDrop = (e: any, dropIndex: number) => {
+      e.preventDefault();
+      const dragIndex = parseInt(e.dataTransfer.getData('stepIndex'));
+      const newSteps = [...steps];
+      const [movedStep] = newSteps.splice(dragIndex, 1);
+      newSteps.splice(dropIndex, 0, movedStep);
+      setSteps(newSteps);
+    };
+
+    // Tag management
+    const addTag = (tag: string) => {
+      if (tag && !selectedTags.includes(tag)) {
+        setSelectedTags([...selectedTags, tag]);
+      }
+    };
+
+    const removeTag = (tag: string) => {
+      setSelectedTags(selectedTags.filter(t => t !== tag));
+    };
+
+    const handleNewTag = () => {
+      if (newTagInput.trim() && !selectedTags.includes(newTagInput.trim())) {
+        setSelectedTags([...selectedTags, newTagInput.trim()]);
+        setNewTagInput('');
+      }
+    };
+
+    const saveRecipe = () => {
+      if (!title.trim() || ingredients.some(i => !i.name.trim()) || steps.some(s => !s.trim())) {
+        alert('Bitte fülle alle Pflichtfelder aus!');
+        return;
+      }
+
+      // Combine main and sub category
+      const finalCategory = mainCategory && subCategory 
+        ? `${mainCategory} > ${subCategory}` 
+        : subCategory || mainCategory || '';
+
+      const totalTime = prepTime + cookTime;
+      const recipeData = {
+        id: isEditing ? editingRecipe.id : Date.now(),
+        title: title.trim(),
+        image,
+        servings: recipeServings,
+        prepTime,
+        cookTime,
+        time: totalTime > 0 ? totalTime.toString() : '', // backward compatibility
+        category: finalCategory,
+        difficulty,
+        tags: selectedTags,
+        ingredients: ingredients.filter(i => i.name.trim()),
+        steps: steps.filter(s => s.trim()),
+        date: recipeDate || new Date().toISOString().split('T')[0],
+        createdAt: isEditing ? editingRecipe.createdAt : new Date().toISOString(),
+        rating: isEditing ? (editingRecipe.rating || 0) : 0,
+        isFavorite: isEditing ? (editingRecipe.isFavorite || false) : false,
+        favorite: isEditing ? (editingRecipe.favorite || false) : false,
+        notes: isEditing ? (editingRecipe.notes || '') : ''
+      };
+
+      let updated;
+      if (isEditing) {
+        updated = recipes.map(r => r.id === editingRecipe.id ? recipeData : r);
+      } else {
+        updated = [...recipes, recipeData];
+      }
+      
+      saveRecipes(updated);
+      
+      if (isEditing) {
+        // Aktualisiere selectedRecipe mit den neuen Daten
+        setSelectedRecipe(recipeData);
+        setEditingRecipe(null);
+        setView('detail');
+      } else {
+        setEditingRecipe(null);
+        setView('home');
+      }
+    };
+
+    const totalTime = prepTime + cookTime;
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 pb-24">
+        <div className="max-w-6xl mx-auto p-6">
+          <div className="grid lg:grid-cols-[1fr_300px] gap-6">
+            {/* Main Form */}
+            <div className="space-y-6">
+              <button
+                onClick={() => setView('home')}
+                className="flex items-center gap-2 text-orange-600 mb-6 font-medium text-lg hover:text-orange-700 transition"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                Zurück
+              </button>
+
+              <h1 className="text-4xl font-bold text-gray-800 mb-6">
+                {isEditing ? `Bearbeiten: ${editingRecipe?.title || ''}` : 'Neues Rezept'}
+              </h1>
+              {isEditing && !editingRecipe && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                  Fehler: Rezept-Daten konnten nicht geladen werden. Bitte versuche es erneut.
+                </div>
+              )}
+            <div className="bg-white rounded-3xl p-6 shadow-lg">
+              <label className="block text-sm font-bold text-gray-700 mb-2">Titel*</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="z.B. Spaghetti Carbonara"
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-lg"
+              />
+            </div>
+
+            <div className="bg-white rounded-3xl p-6 shadow-lg">
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                Rezeptfoto 📸
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none"
+              />
+              {image && (
+                <img src={image} alt="Vorschau" className="mt-4 w-full h-48 object-cover rounded-xl" />
+              )}
+            </div>
+
+            <div className="bg-white rounded-3xl p-6 shadow-lg grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="block text-sm font-bold text-gray-700 mb-2">Hauptkategorie</label>
+                <select
+                  value={mainCategory}
+                  onChange={(e) => {
+                    setMainCategory(e.target.value);
+                    setSubCategory(''); // Reset subcategory when main changes
+                  }}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-lg"
+                >
+                  <option value="">Keine Angabe</option>
+                  {Object.keys(categoryStructure).map((mainCat) => (
+                    <option key={mainCat} value={mainCat}>{mainCat}</option>
+                  ))}
+                </select>
+              </div>
+              {mainCategory && (
+                <div className="col-span-2">
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Unterkategorie</label>
+                  <select
+                    value={subCategory}
+                    onChange={(e) => setSubCategory(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-lg"
+                  >
+                    <option value="">Bitte wählen</option>
+                    {categoryStructure[mainCategory]?.map((subCat) => (
+                      <option key={subCat} value={subCat}>{subCat}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className="col-span-2">
+                <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Datum
+                </label>
+                <input
+                  type="date"
+                  value={recipeDate}
+                  onChange={(e) => setRecipeDate(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Portionen*</label>
+                <input
+                  type="number"
+                  value={recipeServings}
+                  onChange={(e) => setRecipeServings(parseInt(e.target.value) || 1)}
+                  min="1"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Vorbereitungszeit (Min)
+                </label>
+                <input
+                  type="number"
+                  value={prepTime}
+                  onChange={(e) => setPrepTime(parseInt(e.target.value) || 0)}
+                  min="0"
+                  placeholder="15"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Kochzeit (Min)
+                </label>
+                <input
+                  type="number"
+                  value={cookTime}
+                  onChange={(e) => setCookTime(parseInt(e.target.value) || 0)}
+                  min="0"
+                  placeholder="30"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-lg"
+                />
+              </div>
+              {(prepTime > 0 || cookTime > 0) && (
+                <div className="col-span-2">
+                  <div className="text-center py-3 bg-orange-50 rounded-xl">
+                    <span className="text-sm text-gray-600">
+                      Gesamtzeit: <strong className="text-orange-600 text-lg">{prepTime + cookTime} Min</strong>
+                    </span>
+                  </div>
+                </div>
+              )}
+              <div className="col-span-2">
+                <label className="block text-sm font-bold text-gray-700 mb-2">Schwierigkeit</label>
+                <select
+                  value={difficulty}
+                  onChange={(e) => setDifficulty(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-lg"
+                >
+                  <option value="">Keine Angabe</option>
+                  <option value="Einfach">Einfach</option>
+                  <option value="Mittel">Mittel</option>
+                  <option value="Schwer">Schwer</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Tags with Chips */}
+            <div className="bg-white rounded-3xl p-6 shadow-lg">
+              <label className="block text-sm font-bold text-gray-700 mb-3">Tags</label>
+              
+              {/* Selected Tags */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {selectedTags.map((tag, idx) => (
+                  <span 
+                    key={idx}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-full text-sm font-medium shadow-sm hover:shadow-md transition"
+                  >
+                    {tag}
+                    <button
+                      onClick={() => removeTag(tag)}
+                      className="hover:bg-orange-200 rounded-full p-1 transition"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              
+              {/* Suggested Tags */}
+              <div className="mb-4">
+                <p className="text-xs text-gray-500 mb-2">Vorschläge:</p>
+                <div className="flex flex-wrap gap-2">
+                  {SUGGESTED_TAGS
+                    .filter(tag => !selectedTags.includes(tag))
+                    .map((tag, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => addTag(tag)}
+                        className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-orange-100 hover:text-orange-600 transition shadow-sm"
+                      >
+                        {tag}
+                      </button>
+                    ))
+                  }
+                </div>
+              </div>
+              
+              {/* Custom Tag Input */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newTagInput}
+                  onChange={(e) => setNewTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleNewTag();
+                    }
+                  }}
+                  placeholder="Eigenes Tag hinzufügen..."
+                  className="flex-1 px-4 py-2 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-sm"
+                />
+                <button
+                  onClick={handleNewTag}
+                  className="px-4 py-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition font-medium"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Ingredients Section with Smart Input */}
+            <div className="bg-white rounded-3xl p-6 shadow-lg">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-gray-800">Zutaten*</h3>
+                <button
+                  onClick={addIngredient}
+                  className="px-4 py-2 bg-orange-100 text-orange-600 rounded-full font-medium flex items-center gap-2 hover:bg-orange-200 active:scale-95 transition"
+                >
+                  <Plus className="w-4 h-4" />
+                  Zutat
+                </button>
+              </div>
+
+              {/* Quick Add */}
+              <div className="mb-4 p-4 bg-blue-50 rounded-xl border-2 border-blue-100">
+                <label className="text-sm font-medium text-blue-900 mb-2 block">
+                  ⚡ Schnell-Eingabe (z.B. "200g Mehl", "2 EL Butter")
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={quickIngredientInput}
+                    onChange={(e) => setQuickIngredientInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleQuickIngredientAdd();
+                      }
+                    }}
+                    placeholder="200g Mehl"
+                    className="flex-1 px-4 py-3 rounded-xl border-2 border-blue-200 focus:border-blue-400 focus:outline-none"
+                  />
+                  <button
+                    onClick={handleQuickIngredientAdd}
+                    className="px-6 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition font-medium"
+                  >
+                    Hinzufügen
+                  </button>
+                </div>
+              </div>
+
+              {/* Ingredients List */}
+              <div className="space-y-3">
+                {ingredients.map((ing, idx) => (
+                  <div key={idx} className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200 hover:border-orange-300 transition">
+                    <div className="grid grid-cols-[100px_130px_1fr_auto] gap-3 items-center">
+                      <div>
+                        <label className="text-xs text-gray-500 block mb-1">Menge</label>
+                        <input
+                          type="text"
+                          value={ing.amount}
+                          onChange={(e) => updateIngredient(idx, 'amount', e.target.value)}
+                          placeholder="200"
+                          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:border-orange-400 focus:outline-none text-center font-medium"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 block mb-1">Einheit</label>
+                        <select
+                          value={ing.unit}
+                          onChange={(e) => updateIngredient(idx, 'unit', e.target.value)}
+                          className="w-full px-2 py-2.5 rounded-lg border border-gray-300 focus:border-orange-400 focus:outline-none text-sm"
+                        >
+                          {COMMON_UNITS.map(u => (
+                            <option key={u.value} value={u.value}>{u.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 block mb-1">Zutat</label>
+                        <input
+                          type="text"
+                          value={ing.name}
+                          onChange={(e) => updateIngredient(idx, 'name', e.target.value)}
+                          placeholder="z.B. Mehl"
+                          list={`ingredient-suggestions-${idx}`}
+                          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 focus:border-orange-400 focus:outline-none"
+                        />
+                        <datalist id={`ingredient-suggestions-${idx}`}>
+                          {COMMON_INGREDIENTS.map(item => (
+                            <option key={item} value={item} />
+                          ))}
+                        </datalist>
+                      </div>
+                      {ingredients.length > 1 && (
+                        <button
+                          onClick={() => removeIngredient(idx)}
+                          className="p-2.5 text-red-500 hover:bg-red-50 rounded-lg transition self-end"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Steps with Drag & Drop */}
+            <div className="bg-white rounded-3xl p-6 shadow-lg">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-gray-800">Zubereitung*</h3>
+                <button
+                  onClick={addStep}
+                  className="px-4 py-2 bg-orange-100 text-orange-600 rounded-full font-medium flex items-center gap-2 hover:bg-orange-200 active:scale-95 transition"
+                >
+                  <Plus className="w-4 h-4" />
+                  Schritt
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">💡 Tipp: Ziehe Schritte zum Umsortieren</p>
+              <div className="space-y-3">
+                {steps.map((step, idx) => (
+                  <div 
+                    key={idx} 
+                    className="flex gap-3 cursor-move hover:bg-gray-50 p-2 rounded-lg transition"
+                    draggable
+                    onDragStart={(e) => handleStepDragStart(e, idx)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => handleStepDrop(e, idx)}
+                  >
+                    <div className="flex items-start gap-2 pt-2">
+                      <GripVertical className="w-5 h-5 text-gray-400 cursor-grab active:cursor-grabbing" />
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-lg shadow-md">
+                        {idx + 1}
+                      </div>
+                    </div>
+                    <textarea
+                      value={step}
+                      onChange={(e) => updateStep(idx, e.target.value)}
+                      placeholder="Beschreibe diesen Schritt..."
+                      rows="3"
+                      className="flex-1 px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-orange-400 focus:outline-none resize-none text-base"
+                    />
+                    {steps.length > 1 && (
+                      <button
+                        onClick={() => removeStep(idx)}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg h-fit mt-2 transition"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Save Buttons */}
+            <div className="flex gap-3 sticky bottom-20 bg-white p-4 rounded-2xl shadow-2xl border-2 border-gray-200">
+              {isEditing && (
+                <button
+                  onClick={() => {
+                    setEditingRecipe(null);
+                    // Aktualisiere selectedRecipe mit den neuesten Daten
+                    const updatedRecipe = recipes.find(r => r.id === editingRecipe.id);
+                    if (updatedRecipe) {
+                      setSelectedRecipe(updatedRecipe);
+                    }
+                    setView('detail');
+                  }}
+                  className="flex-1 bg-gray-200 text-gray-700 py-4 rounded-2xl font-bold text-lg hover:bg-gray-300 active:scale-95 transition"
+                >
+                  Abbrechen
+                </button>
+              )}
+              <button
+                onClick={saveRecipe}
+                className={`${isEditing ? 'flex-1' : 'w-full'} bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-2xl font-bold text-lg hover:shadow-xl active:scale-95 transition shadow-lg`}
+              >
+                {isEditing ? '✓ Änderungen speichern' : '✓ Rezept speichern'}
+              </button>
+            </div>
+          </div>
+
+          {/* Preview Sidebar (Desktop only) */}
+          <div className="hidden lg:block sticky top-4 h-fit">
+            <div className="bg-white rounded-3xl p-6 shadow-lg">
+              <h3 className="text-sm font-bold text-gray-500 mb-4">VORSCHAU</h3>
+              <div className="border-2 border-dashed border-gray-300 rounded-2xl p-4 space-y-4">
+                {image && (
+                  <img src={image} alt="Preview" className="w-full h-32 object-cover rounded-xl" />
+                )}
+                <h2 className="text-2xl font-bold text-gray-800">
+                  {title || 'Rezepttitel...'}
+                </h2>
+                <div className="flex gap-4 text-sm text-gray-600">
+                  {recipeServings && (
+                    <span className="flex items-center gap-1">
+                      <Users className="w-4 h-4" />
+                      {recipeServings}
+                    </span>
+                  )}
+                  {totalTime > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-4 h-4" />
+                      {totalTime} Min
+                    </span>
+                  )}
+                </div>
+                {selectedTags.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {selectedTags.slice(0, 3).map((tag, i) => (
+                      <span key={i} className="text-xs px-2 py-1 bg-orange-100 text-orange-600 rounded-full">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {ingredients.filter(i => i.name).length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold text-gray-500 mb-2">ZUTATEN</p>
+                    {ingredients.filter(i => i.name).slice(0, 3).map((ing, i) => (
+                      <p key={i} className="text-sm text-gray-700 truncate">
+                        • {ing.amount} {ing.unit} {ing.name}
+                      </p>
+                    ))}
+                    {ingredients.filter(i => i.name).length > 3 && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        +{ingredients.filter(i => i.name).length - 3} weitere
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
+    );
+  };
+
+  // Shopping List Item Component (with edit functionality)
+  const ShoppingListItemComponent = ({ item, onToggle, onUpdate, onDelete }: {
+    item: ShoppingItem;
+    onToggle: () => void;
+    onUpdate: (newText: string) => void;
+    onDelete: () => void;
+  }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editText, setEditText] = useState(item.text);
+
+    useEffect(() => {
+      setEditText(item.text);
+    }, [item.text]);
+
+    const handleSave = () => {
+      if (editText.trim()) {
+        onUpdate(editText.trim());
+        setIsEditing(false);
+      }
+    };
+
+    const handleCancel = () => {
+      setEditText(item.text);
+      setIsEditing(false);
+    };
+
+    if (isEditing) {
+      return (
+        <div className="flex items-center gap-4 p-3 bg-orange-50 rounded-xl border-2 border-orange-300 shadow-md">
+          <input
+            type="text"
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSave();
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                handleCancel();
+              }
+            }}
+            className="flex-1 px-4 py-3 rounded-lg border-2 border-orange-400 focus:border-orange-500 focus:outline-none text-lg font-medium bg-white"
+            autoFocus
+            placeholder="Produktname und Menge eingeben..."
+          />
+          <button
+            onClick={handleSave}
+            className="p-2.5 text-green-600 hover:bg-green-100 rounded-full transition hover:scale-110"
+            title="Speichern (Enter)"
+          >
+            <Check className="w-6 h-6" />
+          </button>
+          <button
+            onClick={handleCancel}
+            className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-full transition"
+            title="Abbrechen (Escape)"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-start gap-3">
+        <button
+          onClick={onToggle}
+          className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center transition mt-0.5 ${
+            item.checked
+              ? 'bg-green-500 border-green-500'
+              : 'border-gray-300 hover:border-orange-400 bg-white'
+          }`}
+        >
+          {item.checked && <Check className="w-5 h-5 text-white" />}
+        </button>
+        <div 
+          className="flex-1 min-w-0 cursor-pointer"
+          onDoubleClick={() => setIsEditing(true)}
+          title="Doppelklick zum Bearbeiten"
+        >
+          <p className={`font-medium text-base leading-relaxed ${item.checked ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+            {item.text}
+          </p>
+          {item.recipeTitles && item.recipeTitles.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-1.5">
+              {item.recipeTitles.map((title, idx) => (
+                <span 
+                  key={idx}
+                  className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-purple-50 text-purple-600 border border-purple-200"
+                  title={`Aus Rezept: ${title}`}
+                >
+                  📋 {title}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            onClick={() => setIsEditing(true)}
+            className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition"
+            title="Bearbeiten (oder Doppelklick auf Text)"
+          >
+            <Edit2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition"
+            title="Löschen"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // Shopping List View with grouped categories
+  const ShoppingListView = () => {
+    const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+    const [BarcodeScannerModal, setBarcodeScannerModal] = useState<React.ComponentType<any> | null>(null);
+    
+    // Lazy load BarcodeScannerModal
+    useEffect(() => {
+      if (showBarcodeScanner && !BarcodeScannerModal) {
+        import('./components/shopping/BarcodeScannerModal').then((module) => {
+          setBarcodeScannerModal(() => module.BarcodeScannerModal);
+        });
+      }
+    }, [showBarcodeScanner, BarcodeScannerModal]);
+    
+    const handleAddProductFromScanner = useCallback((item: ShoppingItem) => {
+      const updatedList = [...shoppingList, item];
+      const merged = mergeIngredients(updatedList);
+      saveShoppingList(merged);
+      setShowBarcodeScanner(false);
+    }, [shoppingList, saveShoppingList]);
+    
+    const mergedList = useMemo(() => mergeIngredients(shoppingList), [shoppingList]);
+    const groupedList = useMemo(() => {
+      // Add categories to items if not present
+      const itemsWithCategories = mergedList.map(item => ({
+        ...item,
+        category: item.category || categorizeShoppingItem(item.text)
+      }));
+      return groupByCategory(itemsWithCategories);
+    }, [mergedList]);
+    
+    const categoryOrder: ShoppingCategory[] = [
+      'Obst & Gemüse',
+      'Fleisch & Fisch',
+      'Milchprodukte',
+      'Backwaren',
+      'Konserven',
+      'Gewürze',
+      'Getränke',
+      'Sonstiges'
+    ];
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 pb-24">
+        <div className="max-w-3xl mx-auto p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-bold text-gray-800">Einkaufsliste</h1>
+            <div className="flex gap-2">
+              {/* Barcode Scanner Button */}
+              <button
+                onClick={() => setShowBarcodeScanner(true)}
+                className="px-4 py-2 bg-blue-100 text-blue-600 rounded-full font-medium text-sm active:scale-95 flex items-center gap-2 hover:bg-blue-200 transition"
+                title="Produkt scannen"
+              >
+                <ScanLine className="w-4 h-4" />
+                Scannen
+              </button>
+              {mergedList.length > 0 && (
+                <button
+                  onClick={shareShoppingList}
+                  className="px-4 py-2 bg-green-100 text-green-600 rounded-full font-medium text-sm active:scale-95 flex items-center gap-2"
+                >
+                  <Share2 className="w-4 h-4" />
+                  Teilen
+                </button>
+              )}
+              {shoppingList.some(item => item.checked) && (
+                <button
+                  onClick={clearCheckedItems}
+                  className="px-4 py-2 bg-red-100 text-red-600 rounded-full font-medium text-sm active:scale-95"
+                >
+                  Erledigte löschen
+                </button>
+              )}
+            </div>
+          </div>
+
+          {mergedList.length === 0 ? (
+            <div className="text-center py-16">
+              <ShoppingCart className="w-20 h-20 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg mb-2">Einkaufsliste ist leer</p>
+              <p className="text-gray-400">Füge Zutaten aus deinen Rezepten hinzu!</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {categoryOrder.map((category) => {
+                const items = groupedList.get(category);
+                if (!items || items.length === 0) return null;
+                
+                return (
+                  <div key={category} className="bg-white rounded-2xl p-5 shadow-md">
+                    <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-gray-200">
+                      <h2 className="text-xl font-bold text-gray-800">
+                        {category}
+                      </h2>
+                      <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                        {items.length} {items.length === 1 ? 'Item' : 'Items'}
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {items.map((item) => (
+                        <div 
+                          key={item.id}
+                          className={`p-3 rounded-xl transition ${
+                            item.checked 
+                              ? 'bg-gray-50 opacity-60' 
+                              : 'bg-gray-50 hover:bg-gray-100'
+                          }`}
+                        >
+                          <ShoppingListItemComponent
+                            item={item}
+                            onToggle={() => toggleShoppingItem(item.id)}
+                            onUpdate={(newText) => updateShoppingItem(item.id, newText)}
+                            onDelete={() => deleteShoppingItem(item.id)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        
+        {/* Barcode Scanner Modal */}
+        {showBarcodeScanner && BarcodeScannerModal && (
+          <BarcodeScannerModal
+            isOpen={showBarcodeScanner}
+            onClose={() => setShowBarcodeScanner(false)}
+            onAddProduct={handleAddProductFromScanner}
+            generateId={generateId}
+            categorizeShoppingItem={categorizeShoppingItem}
+          />
+        )}
+        
+        <BottomNav currentView="shopping" />
+      </div>
+    );
+  };
+
+  // Meal Plan View
+  const MealPlanView = () => {
+    const mealTypes: Array<'Frühstück' | 'Mittagessen' | 'Abendessen' | 'Snack'> = ['Frühstück', 'Mittagessen', 'Abendessen', 'Snack'];
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+    
+    const weekDays = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(startOfWeek);
+      date.setDate(startOfWeek.getDate() + i);
+      return date.toISOString().split('T')[0];
+    });
+
+    const getMealPlanForDay = (date: string, mealType: string) => {
+      return mealPlans.find(p => p.date === date && p.mealType === mealType);
+    };
+
+    const getRecipeForPlan = (plan: any) => {
+      return recipes.find(r => r.id === plan.recipeId);
+    };
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 pb-24">
+        <div className="max-w-5xl mx-auto p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-bold text-gray-800">Wochenplaner</h1>
+            <button
+              onClick={addWeekToShoppingList}
+              className="px-4 py-2 bg-green-500 text-white rounded-xl font-medium active:scale-95 flex items-center gap-2"
+            >
+              <ShoppingCart className="w-5 h-5" />
+              Zur Einkaufsliste
+            </button>
+          </div>
+
+          <div className="bg-white rounded-3xl p-6 shadow-lg overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr>
+                  <th className="text-left p-3 font-bold text-gray-800">Tag</th>
+                  {mealTypes.map(type => (
+                    <th key={type} className="text-left p-3 font-bold text-gray-800 min-w-[150px]">
+                      {type}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {weekDays.map((date, dayIdx) => {
+                  const dayDate = new Date(date);
+                  const dayName = dayDate.toLocaleDateString('de-DE', { weekday: 'short' });
+                  const dayNumber = dayDate.getDate();
+                  
+                  return (
+                    <tr key={date} className="border-b border-gray-200">
+                      <td className="p-3 font-medium text-gray-700">
+                        <div>{dayName}</div>
+                        <div className="text-sm text-gray-500">{dayNumber}.{dayDate.getMonth() + 1}</div>
+                      </td>
+                      {mealTypes.map(mealType => {
+                        const plan = getMealPlanForDay(date, mealType);
+                        const recipe = plan ? getRecipeForPlan(plan) : null;
+                        
+                        return (
+                          <td key={mealType} className="p-3">
+                            {plan && recipe ? (
+                              <div className="bg-orange-50 rounded-lg p-3 border-2 border-orange-200">
+                                <div className="flex justify-between items-start mb-2">
+                                  <span className="font-medium text-sm text-gray-800">{recipe.title}</span>
+                                  <button
+                                    onClick={() => removeMealPlan(plan.id)}
+                                    className="text-red-500 hover:text-red-700"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    setSelectedRecipe(recipe);
+                                    setView('detail');
+                                  }}
+                                  className="text-xs text-orange-600 hover:underline"
+                                >
+                                  Details →
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setSelectedDateForMealPlan(date);
+                                  setSelectedMealTypeForMealPlan(mealType);
+                                  setShowRecipeSelector(true);
+                                }}
+                                className="w-full h-16 border-2 border-dashed border-gray-300 rounded-lg text-gray-400 hover:border-orange-400 hover:text-orange-400 transition text-sm"
+                              >
+                                + Rezept
+                              </button>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-6 bg-blue-50 rounded-xl p-4">
+            <p className="text-sm text-blue-800">
+              <strong>Tipp:</strong> Klicke auf "+ Rezept" um ein Rezept für einen Tag und eine Mahlzeit hinzuzufügen. 
+              Nutze "Zur Einkaufsliste" um alle Zutaten der Woche auf einmal hinzuzufügen.
+            </p>
+          </div>
+
+          {/* Recipe Selector Modal */}
+          {showRecipeSelector && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-2xl font-bold text-gray-800">Rezept auswählen</h2>
+                  <button
+                    onClick={() => {
+                      setShowRecipeSelector(false);
+                      setSelectedDateForMealPlan(null);
+                      setSelectedMealTypeForMealPlan(null);
+                    }}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {recipes.map(recipe => (
+                    <button
+                      key={recipe.id}
+                      onClick={() => {
+                        if (selectedDateForMealPlan && selectedMealTypeForMealPlan) {
+                          addMealPlan(selectedDateForMealPlan, recipe.id, selectedMealTypeForMealPlan as 'Frühstück' | 'Mittagessen' | 'Abendessen' | 'Snack');
+                          setShowRecipeSelector(false);
+                          setSelectedDateForMealPlan(null);
+                          setSelectedMealTypeForMealPlan(null);
+                        }
+                      }}
+                      className="text-left p-4 bg-gray-50 rounded-xl hover:bg-orange-50 transition border-2 border-transparent hover:border-orange-200"
+                    >
+                      <div className="font-medium text-gray-800">{recipe.title}</div>
+                      {recipe.category && (
+                        <div className="text-xs text-gray-500 mt-1">{recipe.category}</div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                {recipes.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    Keine Rezepte vorhanden. Erstelle zuerst ein Rezept!
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+        <BottomNav currentView="mealplan" />
+      </div>
+    );
+  };
+
+  // Bottom Navigation
+  const BottomNav = ({ currentView }: { currentView: string }) => (
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+      <div className="max-w-4xl mx-auto flex justify-around py-3">
+        <button
+          onClick={() => setView('home')}
+          className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition ${
+            currentView === 'home' ? 'text-orange-600 bg-orange-50' : 'text-gray-500'
+          }`}
+        >
+          <ChefHat className="w-5 h-5" />
+          <span className="text-xs font-medium">Rezepte</span>
+        </button>
+        <button
+          onClick={() => setView('mealplan')}
+          className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition ${
+            currentView === 'mealplan' ? 'text-orange-600 bg-orange-50' : 'text-gray-500'
+          }`}
+        >
+          <Calendar className="w-5 h-5" />
+          <span className="text-xs font-medium">Plan</span>
+        </button>
+        <button
+          onClick={() => setView('add')}
+          className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl text-white bg-gradient-to-r from-orange-500 to-red-500 shadow-lg active:scale-95 transition"
+        >
+          <Plus className="w-6 h-6" />
+          <span className="text-xs font-bold">Neu</span>
+        </button>
+        <button
+          onClick={() => setView('shopping')}
+          className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition relative ${
+            currentView === 'shopping' ? 'text-orange-600 bg-orange-50' : 'text-gray-500'
+          }`}
+        >
+          <ShoppingCart className="w-5 h-5" />
+          <span className="text-xs font-medium">Einkauf</span>
+          {shoppingList.length > 0 && (
+            <span className="absolute top-1 right-2 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+              {shoppingList.length}
+            </span>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
+        <ChefHat className="w-16 h-16 text-orange-500 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (isSupabaseConfigured && !user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center p-4">
+        <Auth onSignIn={(u: any) => setUser(u)} />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Error Toast */}
+      {error && (
+        <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-3">
+          <X className="w-5 h-5 cursor-pointer" onClick={() => setError(null)} />
+          <span>{error}</span>
+        </div>
+      )}
+      
+      {view === 'home' && <HomeView />}
+      {view === 'detail' && <DetailView />}
+      {view === 'cooking' && <CookingView />}
+      {(view === 'add' || view === 'edit') && <AddRecipeView />}
+      {view === 'shopping' && <ShoppingListView />}
+      {view === 'mealplan' && <MealPlanView />}
+    </>
+  );
+};
+
+export default RecipeApp;

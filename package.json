@@ -1,0 +1,42 @@
+{
+  "name": "recipe-keeper-app",
+  "version": "1.0.0",
+  "description": "Eine intuitive PWA für Kochrezepte mit Einkaufsliste",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Philbzh/recipe-keeper-app.git"
+  },
+  "keywords": [
+    "recipes",
+    "cooking",
+    "shopping-list",
+    "meal-planner",
+    "pwa",
+    "react",
+    "supabase"
+  ],
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "lucide-react": "^0.263.1",
+    "@supabase/supabase-js": "^2.35.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "@vitejs/plugin-react": "^4.0.3",
+    "autoprefixer": "^10.4.14",
+    "postcss": "^8.4.27",
+    "tailwindcss": "^3.3.3",
+    "vite": "^4.4.5",
+    "vite-plugin-pwa": "^0.16.4"
+  }
+}

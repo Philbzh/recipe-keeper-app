@@ -1,0 +1,87 @@
+═══════════════════════════════════════════════════════════════
+  ANLEITUNG: Projekt in neues Verzeichnis verschieben
+═══════════════════════════════════════════════════════════════
+
+OPTION 1: PowerShell-Skript verwenden (EINFACHSTE METHODE)
+─────────────────────────────────────────────────────────────
+
+1. Öffne PowerShell als Administrator:
+   - Windows-Taste drücken
+   - "PowerShell" eingeben
+   - Rechtsklick auf "Windows PowerShell"
+   - "Als Administrator ausführen" wählen
+
+2. Navigiere zum aktuellen Projekt:
+   cd "c:\Users\User\..2_PHIL\AI\KOCHREZEPTE"
+
+3. Führe das Skript aus:
+   .\verschieben.ps1
+
+4. Folge den Anweisungen auf dem Bildschirm
+
+
+OPTION 2: Manuell über Windows Explorer
+────────────────────────────────────────
+
+1. Öffne Windows Explorer
+
+2. Gehe zu: c:\Users\User\..2_PHIL\AI\KOCHREZEPTE
+
+3. Wähle ALLE Dateien aus (Strg+A)
+   WICHTIG: Entferne "node_modules" aus der Auswahl!
+
+4. Kopiere die Dateien (Strg+C)
+
+5. Erstelle ein neues Verzeichnis, z.B.:
+   C:\Users\User\Desktop\KOCHREZEPTE
+
+6. Füge die Dateien ein (Strg+V)
+
+7. Öffne PowerShell im neuen Verzeichnis:
+   - Rechtsklick im Explorer → "PowerShell hier öffnen"
+
+8. Installiere Dependencies:
+   npm install
+
+9. Starte den Server:
+   npm run dev
+
+
+OPTION 3: PowerShell-Befehle manuell ausführen
+───────────────────────────────────────────────
+
+Führe diese Befehle in PowerShell aus (als Administrator):
+
+# Zielverzeichnis (kannst du ändern)
+$destPath = "$env:USERPROFILE\Desktop\KOCHREZEPTE"
+
+# Erstelle Verzeichnis
+New-Item -ItemType Directory -Path $destPath -Force
+
+# Kopiere Dateien (ohne node_modules)
+$sourcePath = "c:\Users\User\..2_PHIL\AI\KOCHREZEPTE"
+Get-ChildItem -Path $sourcePath -Exclude "node_modules" | 
+    Copy-Item -Destination $destPath -Recurse -Force
+
+# Wechsle ins neue Verzeichnis
+cd $destPath
+
+# Installiere Dependencies
+npm install
+
+# Starte Server
+npm run dev
+
+
+═══════════════════════════════════════════════════════════════
+  WICHTIG:
+═══════════════════════════════════════════════════════════════
+
+✓ node_modules NICHT kopieren - wird neu installiert
+✓ Alle anderen Dateien kopieren (src, package.json, etc.)
+✓ Nach dem Verschieben: npm install ausführen
+✓ Dann: npm run dev starten
+
+Nach dem Verschieben sollte der EPERM-Fehler verschwinden! 🎉
+
+═══════════════════════════════════════════════════════════════

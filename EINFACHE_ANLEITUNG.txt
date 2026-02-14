@@ -1,0 +1,79 @@
+═══════════════════════════════════════════════════════════════
+  EINFACHE ANLEITUNG: Projekt manuell verschieben
+═══════════════════════════════════════════════════════════════
+
+Da ich keine Administratorrechte habe, musst du das Projekt
+manuell verschieben. Das geht ganz einfach:
+
+───────────────────────────────────────────────────────────────
+  SCHRITT 1: Dateien kopieren (Windows Explorer)
+───────────────────────────────────────────────────────────────
+
+1. Öffne Windows Explorer (Windows-Taste + E)
+
+2. Navigiere zu diesem Ordner:
+   c:\Users\User\..2_PHIL\AI\KOCHREZEPTE
+
+3. Drücke Strg+A (alle Dateien auswählen)
+
+4. WICHTIG: Entferne "node_modules" aus der Auswahl!
+   - Klicke auf "node_modules" 
+   - Halte Strg gedrückt und klicke nochmal (abwählen)
+
+5. Drücke Strg+C (kopieren)
+
+───────────────────────────────────────────────────────────────
+  SCHRITT 2: Neues Verzeichnis erstellen
+───────────────────────────────────────────────────────────────
+
+1. Gehe zu deinem Desktop (oder einem anderen Ort)
+
+2. Rechtsklick → Neu → Ordner
+
+3. Nenne ihn: KOCHREZEPTE
+
+4. Öffne den neuen Ordner
+
+───────────────────────────────────────────────────────────────
+  SCHRITT 3: Dateien einfügen
+───────────────────────────────────────────────────────────────
+
+1. Drücke Strg+V (einfügen)
+
+2. Warte, bis alle Dateien kopiert sind
+
+───────────────────────────────────────────────────────────────
+  SCHRITT 4: PowerShell öffnen
+───────────────────────────────────────────────────────────────
+
+1. Im neuen Ordner: Rechtsklick auf leeren Bereich
+
+2. Wähle: "PowerShell hier öffnen"
+   (oder "Terminal hier öffnen" bei Windows 11)
+
+───────────────────────────────────────────────────────────────
+  SCHRITT 5: Dependencies installieren
+───────────────────────────────────────────────────────────────
+
+Führe diese Befehle aus:
+
+npm install
+
+(Warte, bis die Installation fertig ist - kann einige Minuten dauern)
+
+───────────────────────────────────────────────────────────────
+  SCHRITT 6: Server starten
+───────────────────────────────────────────────────────────────
+
+npm run dev
+
+───────────────────────────────────────────────────────────────
+  FERTIG! 🎉
+───────────────────────────────────────────────────────────────
+
+Die App sollte jetzt auf http://localhost:5173 laufen!
+
+Der EPERM-Fehler sollte verschwunden sein, da das Projekt
+jetzt in einem normalen Pfad liegt.
+
+═══════════════════════════════════════════════════════════════

@@ -1,0 +1,52 @@
+═══════════════════════════════════════════════════════════════
+  SCHNELLSTART: App starten
+═══════════════════════════════════════════════════════════════
+
+Das Projekt liegt jetzt hier:
+C:\Users\User\OneDrive\Desktop\KOCHREZEPTE
+
+───────────────────────────────────────────────────────────────
+  App starten:
+───────────────────────────────────────────────────────────────
+
+1. Öffne PowerShell
+
+2. Wechsle ins Projektverzeichnis:
+   cd "C:\Users\User\OneDrive\Desktop\KOCHREZEPTE"
+
+3. Starte den Server:
+   npm run dev
+
+4. Öffne im Browser:
+   http://localhost:5173
+
+
+───────────────────────────────────────────────────────────────
+  ODER: Direkt im Ordner öffnen
+───────────────────────────────────────────────────────────────
+
+1. Öffne den Ordner KOCHREZEPTE auf deinem Desktop
+
+2. Rechtsklick auf leeren Bereich → "PowerShell hier öffnen"
+
+3. Führe aus:
+   npm run dev
+
+
+───────────────────────────────────────────────────────────────
+  WICHTIG:
+───────────────────────────────────────────────────────────────
+
+✓ Dependencies sind bereits installiert (npm install wurde ausgeführt)
+✓ Der Server sollte jetzt ohne EPERM-Fehler laufen!
+✓ Die App ist eine PWA - kann auf dem Handy installiert werden
+
+
+───────────────────────────────────────────────────────────────
+  Falls Probleme:
+───────────────────────────────────────────────────────────────
+
+- Port bereits belegt? → Server verwendet automatisch nächsten Port (5174, 5175, etc.)
+- Fehler? → Prüfe, ob alle Dateien kopiert wurden (src/, package.json, vite.config.js)
+
+═══════════════════════════════════════════════════════════════
