@@ -1055,22 +1055,22 @@ const RecipeApp = () => {
     const [editedNotes, setEditedNotes] = useState(selectedRecipe.notes || '');
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 pb-8">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 pb-24">
         <div className="max-w-3xl mx-auto">
           {selectedRecipe.image && (
-            <div className="h-64 overflow-hidden bg-gray-100">
+            <div className="h-48 sm:h-64 overflow-hidden bg-gray-100">
               <img src={selectedRecipe.image} alt={selectedRecipe.title} className="w-full h-full object-cover" />
             </div>
           )}
           
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
+          <div className="p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4 gap-2">
               <button
                 onClick={() => setView('home')}
-                className="flex items-center gap-2 text-orange-600 font-medium text-lg"
+                className="flex items-center gap-2 text-orange-600 font-medium text-base sm:text-lg min-h-[44px] px-2 -ml-2"
               >
                 <ArrowLeft className="w-5 h-5" />
-                Zurück
+                <span>Zurück</span>
               </button>
               <button
                 onClick={() => {
@@ -1083,19 +1083,20 @@ const RecipeApp = () => {
                     alert('Fehler: Rezept nicht gefunden');
                   }
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-xl font-medium active:scale-95 transition shadow-lg hover:bg-blue-600"
+                className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-2 bg-blue-500 text-white rounded-xl font-medium active:scale-95 transition shadow-lg hover:bg-blue-600 min-h-[44px] text-sm sm:text-base"
               >
-                <Edit2 className="w-5 h-5" />
-                Bearbeiten
+                <Edit2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="hidden sm:inline">Bearbeiten</span>
+                <span className="sm:hidden">Edit</span>
               </button>
             </div>
 
-            <div className="flex justify-between items-start mb-4">
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-800 flex-1">{selectedRecipe.title}</h1>
-              <div className="flex gap-2">
+            <div className="flex justify-between items-start mb-4 gap-2">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 flex-1 pr-2">{selectedRecipe.title}</h1>
+              <div className="flex gap-2 flex-shrink-0">
                 <button
                   onClick={() => toggleFavorite(selectedRecipe.id)}
-                  className={`p-3 rounded-full transition ${
+                  className={`p-2.5 sm:p-3 rounded-full transition min-w-[44px] min-h-[44px] flex items-center justify-center ${
                     selectedRecipe.isFavorite 
                       ? 'bg-yellow-100 text-yellow-600' 
                       : 'bg-gray-100 text-gray-400'
@@ -1105,7 +1106,7 @@ const RecipeApp = () => {
                 </button>
                 <button
                   onClick={() => deleteRecipe(selectedRecipe.id)}
-                  className="p-3 text-red-500 hover:bg-red-50 rounded-full transition"
+                  className="p-2.5 sm:p-3 text-red-500 hover:bg-red-50 rounded-full transition min-w-[44px] min-h-[44px] flex items-center justify-center"
                 >
                   <Trash2 className="w-5 h-5" />
                 </button>
@@ -1117,10 +1118,10 @@ const RecipeApp = () => {
                 <button
                   key={star}
                   onClick={() => updateRecipeRating(selectedRecipe.id, star)}
-                  className="transition active:scale-110"
+                  className="transition active:scale-110 min-w-[44px] min-h-[44px] flex items-center justify-center"
                 >
                   <Star
-                    className={`w-7 h-7 ${
+                    className={`w-6 h-6 sm:w-7 sm:h-7 ${
                       star <= (selectedRecipe.rating || 0)
                         ? 'fill-yellow-400 text-yellow-400'
                         : 'text-gray-300'
@@ -1130,25 +1131,25 @@ const RecipeApp = () => {
               ))}
             </div>
 
-            <div className="flex flex-wrap gap-2 mb-6">
+            <div className="flex flex-wrap gap-2 mb-4 sm:mb-6">
               {selectedRecipe.category && (
-                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                <span className="px-2.5 sm:px-3 py-1.5 sm:py-1 bg-blue-100 text-blue-700 rounded-full text-xs sm:text-sm font-medium">
                   {selectedRecipe.category}
                 </span>
               )}
               {selectedRecipe.difficulty && (
-                <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                <span className="px-2.5 sm:px-3 py-1.5 sm:py-1 bg-purple-100 text-purple-700 rounded-full text-xs sm:text-sm font-medium">
                   {selectedRecipe.difficulty}
                 </span>
               )}
               {selectedRecipe.date && (
-                <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium flex items-center gap-1">
-                  <Calendar className="w-4 h-4" />
+                <span className="px-2.5 sm:px-3 py-1.5 sm:py-1 bg-gray-100 text-gray-700 rounded-full text-xs sm:text-sm font-medium flex items-center gap-1">
+                  <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
                   {new Date(selectedRecipe.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                 </span>
               )}
               {selectedRecipe.tags && selectedRecipe.tags.map((tag, idx) => (
-                <span key={idx} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
+                <span key={idx} className="px-2.5 sm:px-3 py-1.5 sm:py-1 bg-orange-100 text-orange-700 rounded-full text-xs sm:text-sm font-medium">
                   {tag}
                 </span>
               ))}
@@ -1156,92 +1157,94 @@ const RecipeApp = () => {
 
             <button
               onClick={() => setShowNotes(!showNotes)}
-              className="w-full mb-6 px-4 py-3 bg-white rounded-2xl shadow-md text-left font-medium text-gray-700 flex items-center justify-between text-lg"
+              className="w-full mb-4 sm:mb-6 px-4 py-3 bg-white rounded-2xl shadow-md text-left font-medium text-gray-700 flex items-center justify-between text-base sm:text-lg min-h-[52px]"
             >
               <span>📝 Eigene Notizen {selectedRecipe.notes && '✓'}</span>
-              <span>{showNotes ? '▲' : '▼'}</span>
+              <span className="text-lg">{showNotes ? '▲' : '▼'}</span>
             </button>
 
             {showNotes && (
-              <div className="bg-white rounded-3xl p-6 shadow-lg mb-6">
+              <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg mb-4 sm:mb-6">
                 <textarea
                   value={editedNotes}
                   onChange={(e) => setEditedNotes(e.target.value)}
                   placeholder="z.B. 'mehr Salz', '10 Min länger backen'..."
                   rows="4"
-                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none resize-none mb-3 text-lg"
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none resize-none mb-3 text-base sm:text-lg min-h-[100px]"
                 />
                 <button
                   onClick={() => {
                     updateRecipeNotes(selectedRecipe.id, editedNotes);
                     setShowNotes(false);
                   }}
-                  className="w-full bg-orange-500 text-white py-3 rounded-xl font-medium active:scale-95 transition text-lg"
+                  className="w-full bg-orange-500 text-white py-3 sm:py-3 rounded-xl font-medium active:scale-95 transition text-base sm:text-lg min-h-[52px]"
                 >
                   Notizen speichern
                 </button>
               </div>
             )}
 
-            <div className="bg-white rounded-3xl p-6 shadow-lg mb-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">Portionen</h2>
-                <div className="flex items-center gap-4">
+            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg mb-4 sm:mb-6">
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Portionen</h2>
+                <div className="flex items-center gap-3 sm:gap-4">
                   <button
                     onClick={() => setServings(Math.max(1, servings - 1))}
-                    className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 font-bold text-2xl flex items-center justify-center active:scale-95"
+                    className="w-12 h-12 sm:w-12 sm:h-12 rounded-full bg-orange-100 text-orange-600 font-bold text-2xl flex items-center justify-center active:scale-95 min-w-[48px] min-h-[48px]"
                   >
                     -
                   </button>
-                  <span className="text-3xl font-bold text-gray-800 w-16 text-center">{servings}</span>
+                  <span className="text-2xl sm:text-3xl font-bold text-gray-800 w-12 sm:w-16 text-center">{servings}</span>
                   <button
                     onClick={() => setServings(servings + 1)}
-                    className="w-12 h-12 rounded-full bg-orange-100 text-orange-600 font-bold text-2xl flex items-center justify-center active:scale-95"
+                    className="w-12 h-12 sm:w-12 sm:h-12 rounded-full bg-orange-100 text-orange-600 font-bold text-2xl flex items-center justify-center active:scale-95 min-w-[48px] min-h-[48px]"
                   >
                     +
                   </button>
                 </div>
               </div>
 
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Zutaten</h3>
-              <div className="space-y-3 mb-6">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">Zutaten</h3>
+              <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
                 {selectedRecipe.ingredients.map((ing, idx) => (
-                  <div key={idx} className="flex justify-between items-center py-3 border-b border-gray-100">
-                    <span className="text-gray-700 text-lg">{ing.name}</span>
-                    <span className="font-semibold text-gray-800 text-lg">
+                  <div key={idx} className="flex justify-between items-center py-2.5 sm:py-3 border-b border-gray-100">
+                    <span className="text-gray-700 text-base sm:text-lg pr-2">{ing.name}</span>
+                    <span className="font-semibold text-gray-800 text-base sm:text-lg flex-shrink-0">
                       {parseFloat((parseFloat(ing.amount) * factor).toFixed(1))} {ing.unit}
                     </span>
                   </div>
                 ))}
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <button
                   onClick={() => {
                     setCurrentStepIndex(0);
                     setView('cooking');
                   }}
-                  className="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 active:scale-95 transition shadow-lg"
+                  className="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-3 sm:py-4 rounded-2xl font-bold text-base sm:text-lg flex items-center justify-center gap-2 active:scale-95 transition shadow-lg min-h-[52px]"
                 >
                   <Play className="w-5 h-5" />
-                  Kochansicht
+                  <span className="hidden sm:inline">Kochansicht</span>
+                  <span className="sm:hidden">Kochen</span>
                 </button>
                 <button
                   onClick={() => addToShoppingList(selectedRecipe, servings)}
-                  className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 active:scale-95 transition shadow-lg"
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 sm:py-4 rounded-2xl font-bold text-base sm:text-lg flex items-center justify-center gap-2 active:scale-95 transition shadow-lg min-h-[52px]"
                 >
                   <ShoppingCart className="w-5 h-5" />
-                  Zur Einkaufsliste
+                  <span className="hidden sm:inline">Zur Einkaufsliste</span>
+                  <span className="sm:hidden">Einkauf</span>
                 </button>
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl p-6 shadow-lg mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-gray-800">Zubereitung</h3>
+            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg mb-4 sm:mb-6">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-800">Zubereitung</h3>
                 <button
                   onClick={startVoiceControl}
-                  className={`p-3 rounded-full transition ${
+                  className={`p-2.5 sm:p-3 rounded-full transition min-w-[44px] min-h-[44px] flex items-center justify-center ${
                     isListening 
                       ? 'bg-red-500 text-white animate-pulse' 
                       : 'bg-orange-100 text-orange-600'
@@ -1252,36 +1255,36 @@ const RecipeApp = () => {
                 </button>
               </div>
               {isListening && (
-                <div className="mb-4 p-3 bg-orange-50 rounded-xl text-sm text-orange-800">
+                <div className="mb-3 sm:mb-4 p-3 bg-orange-50 rounded-xl text-xs sm:text-sm text-orange-800">
                   🎤 Sage: "Nächster Schritt", "Zurück", "Wiederholen" oder "Stopp"
                 </div>
               )}
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {selectedRecipe.steps.map((step, idx) => (
                   <div 
                     key={idx} 
-                    className={`flex gap-4 p-4 rounded-xl transition ${
+                    className={`flex gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl transition ${
                       idx === currentStepIndex 
                         ? 'bg-orange-50 border-2 border-orange-300' 
                         : 'bg-gray-50'
                     }`}
                   >
-                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold ${
+                    <div className={`flex-shrink-0 w-8 h-8 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-sm sm:text-base ${
                       idx === currentStepIndex 
                         ? 'bg-orange-500 text-white' 
                         : 'bg-gray-300 text-gray-600'
                     }`}>
                       {idx + 1}
                     </div>
-                    <p className="text-gray-700 pt-1 flex-1 text-lg">{step}</p>
+                    <p className="text-gray-700 pt-1 flex-1 text-base sm:text-lg leading-relaxed">{step}</p>
                   </div>
                 ))}
               </div>
-              <div className="flex gap-3 mt-6">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4 sm:mt-6">
                 <button
                   onClick={() => setCurrentStepIndex(Math.max(0, currentStepIndex - 1))}
                   disabled={currentStepIndex === 0}
-                  className="flex-1 py-4 bg-gray-200 text-gray-700 rounded-xl font-medium disabled:opacity-50 active:scale-95 transition text-lg"
+                  className="flex-1 py-3 sm:py-4 bg-gray-200 text-gray-700 rounded-xl font-medium disabled:opacity-50 active:scale-95 transition text-base sm:text-lg min-h-[52px]"
                 >
                   ← Zurück
                 </button>
@@ -1289,7 +1292,7 @@ const RecipeApp = () => {
                   onClick={() => {
                     speakText(`Schritt ${currentStepIndex + 1}: ${selectedRecipe.steps[currentStepIndex]}`);
                   }}
-                  className="flex-1 py-4 bg-blue-500 text-white rounded-xl font-medium active:scale-95 transition flex items-center justify-center gap-2 text-lg"
+                  className="flex-1 py-3 sm:py-4 bg-blue-500 text-white rounded-xl font-medium active:scale-95 transition flex items-center justify-center gap-2 text-base sm:text-lg min-h-[52px]"
                 >
                   <Mic className="w-4 h-4" />
                   Vorlesen
@@ -1297,7 +1300,7 @@ const RecipeApp = () => {
                 <button
                   onClick={() => setCurrentStepIndex(Math.min(selectedRecipe.steps.length - 1, currentStepIndex + 1))}
                   disabled={currentStepIndex === selectedRecipe.steps.length - 1}
-                  className="flex-1 py-4 bg-orange-500 text-white rounded-xl font-medium disabled:opacity-50 active:scale-95 transition text-lg"
+                  className="flex-1 py-3 sm:py-4 bg-orange-500 text-white rounded-xl font-medium disabled:opacity-50 active:scale-95 transition text-base sm:text-lg min-h-[52px]"
                 >
                   Weiter →
                 </button>
