@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Search, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Search, Loader2, CheckCircle2, AlertCircle, Camera, Keyboard } from 'lucide-react';
+import { Html5Qrcode } from 'html5-qrcode';
 import { OpenFoodFactsService, ProductData } from '../../services/openFoodFactsService';
 import { ShoppingItem } from '../../types';
 
@@ -23,7 +24,11 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   const [product, setProduct] = useState<ProductData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [customQuantity, setCustomQuantity] = useState('');
+  const [scanMode, setScanMode] = useState<'manual' | 'camera'>('manual');
+  const [isScanning, setIsScanning] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerContainerRef = useRef<HTMLDivElement>(null);
 
   // Focus input when modal opens
   useEffect(() => {
@@ -40,27 +45,86 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
       setError(null);
       setIsLoading(false);
       setCustomQuantity('');
+      setScanMode('manual');
+      stopCamera();
     }
   }, [isOpen]);
 
-  const handleSearch = async () => {
-    const barcode = barcodeInput.trim();
-    if (!barcode) {
-      setError('Bitte gib einen Barcode ein');
-      return;
+  // Stop camera when component unmounts or scan mode changes
+  useEffect(() => {
+    if (scanMode === 'manual') {
+      stopCamera();
     }
+    return () => {
+      stopCamera();
+    };
+  }, [scanMode]);
 
+  const stopCamera = async () => {
+    if (scannerRef.current && isScanning) {
+      try {
+        await scannerRef.current.stop();
+        await scannerRef.current.clear();
+        scannerRef.current = null;
+        setIsScanning(false);
+      } catch (err) {
+        console.error('Error stopping camera:', err);
+      }
+    }
+  };
+
+  const startCamera = async () => {
+    if (!scannerContainerRef.current) return;
+
+    try {
+      const scanner = new Html5Qrcode(scannerContainerRef.current.id);
+      scannerRef.current = scanner;
+
+      await scanner.start(
+        { facingMode: 'environment' }, // Use back camera on mobile
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+        },
+        (decodedText: string) => {
+          // Barcode scanned successfully
+          setBarcodeInput(decodedText);
+          handleBarcodeScanned(decodedText);
+        },
+        (_errorMessage: string) => {
+          // Ignore scanning errors (they're normal while scanning)
+        }
+      );
+      setIsScanning(true);
+    } catch (err: any) {
+      console.error('Error starting camera:', err);
+      setError('Kamera konnte nicht gestartet werden. Bitte erlaube den Zugriff auf die Kamera oder verwende die manuelle Eingabe.');
+      setScanMode('manual');
+    }
+  };
+
+  const handleBarcodeScanned = async (barcode: string) => {
+    // Stop camera after successful scan
+    await stopCamera();
+    setScanMode('manual');
+    
+    // Automatically search for the product
+    setBarcodeInput(barcode);
+    await handleSearchWithBarcode(barcode);
+  };
+
+  const handleSearchWithBarcode = async (barcode: string) => {
     setIsLoading(true);
     setError(null);
     setProduct(null);
-    setCustomQuantity(''); // Reset custom quantity when searching
+    setCustomQuantity('');
 
     try {
       const productData = await OpenFoodFactsService.getProductByBarcode(barcode);
       
       if (productData) {
         setProduct(productData);
-        // Initialize customQuantity with product quantity if available
         setCustomQuantity(productData.quantity || '');
       } else {
         setError('Produkt nicht gefunden. Bitte überprüfe den Barcode oder gib das Produkt manuell ein.');
@@ -70,6 +134,31 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
       console.error('Error fetching product:', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSearch = async () => {
+    const barcode = barcodeInput.trim();
+    if (!barcode) {
+      setError('Bitte gib einen Barcode ein');
+      return;
+    }
+    await handleSearchWithBarcode(barcode);
+  };
+
+  const handleModeSwitch = async (mode: 'manual' | 'camera') => {
+    if (mode === scanMode) return;
+    
+    if (mode === 'camera') {
+      setScanMode('camera');
+      setError(null);
+      // Start camera after a short delay to allow UI to update
+      setTimeout(() => {
+        startCamera();
+      }, 100);
+    } else {
+      await stopCamera();
+      setScanMode('manual');
     }
   };
 
@@ -149,44 +238,95 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
           </button>
         </div>
 
-        {/* Barcode Input */}
+        {/* Mode Toggle */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Barcode eingeben
-          </label>
-          <div className="flex gap-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={barcodeInput}
-              onChange={(e) => setBarcodeInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="z.B. 4001234567890"
-              className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-lg"
-              disabled={isLoading}
-            />
+          <div className="flex gap-2 bg-gray-100 p-1 rounded-xl">
             <button
-              onClick={handleSearch}
-              disabled={isLoading || !barcodeInput.trim()}
-              className="px-6 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition font-medium flex items-center gap-2"
+              onClick={() => handleModeSwitch('manual')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition ${
+                scanMode === 'manual'
+                  ? 'bg-white text-orange-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Suche...
-                </>
-              ) : (
-                <>
-                  <Search className="w-5 h-5" />
-                  Suchen
-                </>
-              )}
+              <Keyboard className="w-5 h-5" />
+              Manuell
+            </button>
+            <button
+              onClick={() => handleModeSwitch('camera')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition ${
+                scanMode === 'camera'
+                  ? 'bg-white text-orange-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              <Camera className="w-5 h-5" />
+              Kamera
             </button>
           </div>
-          <p className="text-xs text-gray-500 mt-2">
-            💡 Tipp: Gib den Barcode manuell ein oder nutze die Kamera deines Geräts
-          </p>
         </div>
+
+        {/* Camera Scanner */}
+        {scanMode === 'camera' && (
+          <div className="mb-6">
+            <div
+              id="qr-reader"
+              ref={scannerContainerRef}
+              className="w-full rounded-xl overflow-hidden bg-black"
+              style={{ minHeight: '300px' }}
+            />
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              📷 Richte die Kamera auf den Barcode
+            </p>
+            <button
+              onClick={() => handleModeSwitch('manual')}
+              className="w-full mt-3 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium"
+            >
+              Zur manuellen Eingabe wechseln
+            </button>
+          </div>
+        )}
+
+        {/* Manual Barcode Input */}
+        {scanMode === 'manual' && (
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Barcode eingeben
+            </label>
+            <div className="flex gap-2">
+              <input
+                ref={inputRef}
+                type="text"
+                value={barcodeInput}
+                onChange={(e) => setBarcodeInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="z.B. 4001234567890"
+                className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-lg"
+                disabled={isLoading}
+              />
+              <button
+                onClick={handleSearch}
+                disabled={isLoading || !barcodeInput.trim()}
+                className="px-6 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition font-medium flex items-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Suche...
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-5 h-5" />
+                    Suchen
+                  </>
+                )}
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              💡 Tipp: Gib den Barcode manuell ein oder nutze die Kamera deines Geräts
+            </p>
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (
