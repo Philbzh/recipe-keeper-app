@@ -2122,7 +2122,7 @@ const RecipeApp = () => {
 
     if (isEditing) {
       return (
-        <div className="flex items-center gap-4 p-3 bg-orange-50 rounded-xl border-2 border-orange-300 shadow-md">
+        <div className="flex items-center gap-2 sm:gap-4 p-3 bg-orange-50 rounded-xl border-2 border-orange-300 shadow-md">
           <input
             type="text"
             value={editText}
@@ -2137,76 +2137,82 @@ const RecipeApp = () => {
                 handleCancel();
               }
             }}
-            className="flex-1 px-4 py-3 rounded-lg border-2 border-orange-400 focus:border-orange-500 focus:outline-none text-lg font-medium bg-white"
+            className="flex-1 px-3 sm:px-4 py-3 rounded-lg border-2 border-orange-400 focus:border-orange-500 focus:outline-none text-base sm:text-lg font-medium bg-white min-h-[44px]"
             autoFocus
             placeholder="Produktname und Menge eingeben..."
           />
           <button
             onClick={handleSave}
-            className="p-2.5 text-green-600 hover:bg-green-100 rounded-full transition hover:scale-110"
+            className="p-2.5 sm:p-2.5 text-green-600 hover:bg-green-100 rounded-full transition hover:scale-110 min-w-[44px] min-h-[44px] flex items-center justify-center"
             title="Speichern (Enter)"
           >
-            <Check className="w-6 h-6" />
+            <Check className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
           <button
             onClick={handleCancel}
-            className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-full transition"
+            className="p-2.5 sm:p-2.5 text-gray-600 hover:bg-gray-100 rounded-full transition min-w-[44px] min-h-[44px] flex items-center justify-center"
             title="Abbrechen (Escape)"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
       );
     }
 
     return (
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2 sm:gap-3">
         <button
           onClick={onToggle}
-          className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center transition mt-0.5 ${
+          className={`flex-shrink-0 w-10 h-10 sm:w-8 sm:h-8 rounded-full border-2 flex items-center justify-center transition mt-0.5 min-w-[44px] min-h-[44px] sm:min-w-[32px] sm:min-h-[32px] ${
             item.checked
               ? 'bg-green-500 border-green-500'
               : 'border-gray-300 hover:border-orange-400 bg-white'
           }`}
         >
-          {item.checked && <Check className="w-5 h-5 text-white" />}
+          {item.checked && <Check className="w-5 h-5 sm:w-5 sm:h-5 text-white" />}
         </button>
         <div 
           className="flex-1 min-w-0 cursor-pointer"
           onDoubleClick={() => setIsEditing(true)}
+          onClick={() => {
+            // On mobile, single tap can also trigger edit (optional)
+            if (window.innerWidth < 768) {
+              // Only on mobile, but keep double-tap as primary
+            }
+          }}
           title="Doppelklick zum Bearbeiten"
         >
-          <p className={`font-medium text-base leading-relaxed ${item.checked ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+          <p className={`font-medium text-base sm:text-base leading-relaxed ${item.checked ? 'line-through text-gray-400' : 'text-gray-800'}`}>
             {item.text}
           </p>
           {item.recipeTitles && item.recipeTitles.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-1.5">
+            <div className="flex flex-wrap gap-1 sm:gap-1.5 mt-1.5">
               {item.recipeTitles.map((title, idx) => (
                 <span 
                   key={idx}
-                  className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-purple-50 text-purple-600 border border-purple-200"
+                  className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-md text-xs font-medium bg-purple-50 text-purple-600 border border-purple-200"
                   title={`Aus Rezept: ${title}`}
                 >
-                  📋 {title}
+                  📋 <span className="hidden sm:inline">{title}</span><span className="sm:hidden">{title.length > 15 ? title.substring(0, 15) + '...' : title}</span>
                 </span>
               ))}
             </div>
           )}
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-1 sm:gap-1 flex-shrink-0">
           <button
             onClick={() => setIsEditing(true)}
-            className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition"
+            className="p-2 sm:p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition min-w-[44px] min-h-[44px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center"
             title="Bearbeiten (oder Doppelklick auf Text)"
           >
-            <Edit2 className="w-4 h-4" />
+            <Edit2 className="w-5 h-5 sm:w-4 sm:h-4" />
           </button>
           <button
             onClick={onDelete}
-            className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition"
+            className="p-2 sm:p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition min-w-[44px] min-h-[44px] sm:min-w-[32px] sm:min-h-[32px] flex items-center justify-center"
             title="Löschen"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-5 h-5 sm:w-4 sm:h-4" />
           </button>
         </div>
       </div>
@@ -2257,32 +2263,32 @@ const RecipeApp = () => {
     
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 pb-24">
-        <div className="max-w-3xl mx-auto p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-800">Einkaufsliste</h1>
-            <div className="flex gap-2">
+        <div className="max-w-3xl mx-auto p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 sm:mb-6">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Einkaufsliste</h1>
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
               {/* Barcode Scanner Button */}
               <button
                 onClick={() => setShowBarcodeScanner(true)}
-                className="px-4 py-2 bg-blue-100 text-blue-600 rounded-full font-medium text-sm active:scale-95 flex items-center gap-2 hover:bg-blue-200 transition"
+                className="flex-1 sm:flex-none px-4 py-3 sm:py-2 bg-blue-100 text-blue-600 rounded-full font-medium text-sm active:scale-95 flex items-center justify-center gap-2 hover:bg-blue-200 transition min-h-[44px]"
                 title="Produkt scannen"
               >
                 <ScanLine className="w-4 h-4" />
-                Scannen
+                <span>Scannen</span>
               </button>
               {mergedList.length > 0 && (
                 <button
                   onClick={shareShoppingList}
-                  className="px-4 py-2 bg-green-100 text-green-600 rounded-full font-medium text-sm active:scale-95 flex items-center gap-2"
+                  className="flex-1 sm:flex-none px-4 py-3 sm:py-2 bg-green-100 text-green-600 rounded-full font-medium text-sm active:scale-95 flex items-center justify-center gap-2 min-h-[44px]"
                 >
                   <Share2 className="w-4 h-4" />
-                  Teilen
+                  <span>Teilen</span>
                 </button>
               )}
               {shoppingList.some(item => item.checked) && (
                 <button
                   onClick={clearCheckedItems}
-                  className="px-4 py-2 bg-red-100 text-red-600 rounded-full font-medium text-sm active:scale-95"
+                  className="flex-1 sm:flex-none px-4 py-3 sm:py-2 bg-red-100 text-red-600 rounded-full font-medium text-sm active:scale-95 min-h-[44px]"
                 >
                   Erledigte löschen
                 </button>
@@ -2292,23 +2298,23 @@ const RecipeApp = () => {
 
           {mergedList.length === 0 ? (
             <div className="text-center py-16">
-              <ShoppingCart className="w-20 h-20 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg mb-2">Einkaufsliste ist leer</p>
-              <p className="text-gray-400">Füge Zutaten aus deinen Rezepten hinzu!</p>
+              <ShoppingCart className="w-16 sm:w-20 h-16 sm:h-20 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-base sm:text-lg mb-2">Einkaufsliste ist leer</p>
+              <p className="text-gray-400 text-sm sm:text-base">Füge Zutaten aus deinen Rezepten hinzu!</p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {categoryOrder.map((category) => {
                 const items = groupedList.get(category);
                 if (!items || items.length === 0) return null;
                 
                 return (
-                  <div key={category} className="bg-white rounded-2xl p-5 shadow-md">
-                    <div className="flex items-center justify-between mb-4 pb-2 border-b-2 border-gray-200">
-                      <h2 className="text-xl font-bold text-gray-800">
+                  <div key={category} className="bg-white rounded-2xl p-4 sm:p-5 shadow-md">
+                    <div className="flex items-center justify-between mb-3 sm:mb-4 pb-2 border-b-2 border-gray-200">
+                      <h2 className="text-lg sm:text-xl font-bold text-gray-800">
                         {category}
                       </h2>
-                      <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                      <span className="text-xs sm:text-sm font-medium text-gray-500 bg-gray-100 px-2 sm:px-3 py-1 rounded-full">
                         {items.length} {items.length === 1 ? 'Item' : 'Items'}
                       </span>
                     </div>
@@ -2316,7 +2322,7 @@ const RecipeApp = () => {
                       {items.map((item) => (
                         <div 
                           key={item.id}
-                          className={`p-3 rounded-xl transition ${
+                          className={`p-3 sm:p-3 rounded-xl transition ${
                             item.checked 
                               ? 'bg-gray-50 opacity-60' 
                               : 'bg-gray-50 hover:bg-gray-100'
