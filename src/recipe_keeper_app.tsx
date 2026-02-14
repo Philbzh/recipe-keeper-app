@@ -771,7 +771,7 @@ const RecipeApp = () => {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <ChefHat className="w-10 h-10 text-orange-600" />
-              <h1 className="text-3xl font-bold text-gray-800">Meine Rezepte</h1>
+              <h1 className="text-3xl font-bold text-gray-800">Phils Rezepte</h1>
             </div>
 
             <div className="relative">
