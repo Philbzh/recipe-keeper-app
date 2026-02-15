@@ -118,14 +118,16 @@ export const searchRecipes = (
   }
 ): Recipe[] => {
   return recipes.filter(recipe => {
-    // Search term (title, ingredients, tags)
-    if (searchTerm) {
-      const term = safeSearchStr(searchTerm);
-      const matchesTitle = safeSearchStr(recipe?.title).includes(term);
-      
+    if (!recipe) return false;
+
+    // Search term (title, ingredients, tags, steps) – trim so spaces don't break search
+    const term = safeSearchStr(searchTerm).trim();
+    if (term) {
+      const matchesTitle = safeSearchStr(recipe.title).includes(term);
+
       // Normalize ingredients to string[] (handle both formats and bad data)
       let ingredientStrings: string[] = [];
-      const raw = recipe?.ingredients;
+      const raw = recipe.ingredients;
       if (Array.isArray(raw) && raw.length > 0) {
         const first = raw[0];
         const isObjFormat = first != null && typeof first === 'object' && 'name' in first;
@@ -135,15 +137,17 @@ export const searchRecipes = (
             )
           : raw.map(ing => (typeof ing === 'string' ? ing : String(ing ?? '')));
       }
-      
+
       const matchesIngredients = ingredientStrings.some(ing =>
         safeSearchStr(ing).includes(term)
       );
-      const matchesTags = Array.isArray(recipe?.tags) && recipe.tags.some(tag =>
+      const matchesTags = Array.isArray(recipe.tags) && recipe.tags.some(tag =>
         safeSearchStr(tag).includes(term)
       );
-      
-      if (!matchesTitle && !matchesIngredients && !matchesTags) {
+      const steps: string[] = Array.isArray(recipe.steps) ? recipe.steps : [];
+      const matchesSteps = steps.some(step => safeSearchStr(step).includes(term));
+
+      if (!matchesTitle && !matchesIngredients && !matchesTags && !matchesSteps) {
         return false;
       }
     }
