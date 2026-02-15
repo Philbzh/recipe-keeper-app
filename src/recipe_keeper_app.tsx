@@ -4,7 +4,7 @@ import Auth from './Auth';
 import RecipeDataService from './dataService';
 import { MealPlan, ShoppingCategory, ShoppingItem } from './types';
 import { searchRecipes, sortRecipes, generateId, mergeIngredients, groupByCategory, categorizeShoppingItem, parseIngredientInput } from './utils';
-import { Plus, Search, ShoppingCart, ChefHat, Users, Clock, ArrowLeft, Trash2, Check, X, Star, Mic, SlidersHorizontal, Share2, Play, Edit2, Settings, Calendar, GripVertical, ScanLine } from 'lucide-react';
+import { Plus, Search, ShoppingCart, ChefHat, Users, Clock, ArrowLeft, Trash2, Check, X, Star, Mic, SlidersHorizontal, Share2, Play, Edit2, Settings, Calendar, GripVertical, ScanLine, Copy, Download, Upload, Printer, Moon, Sun, FileText } from 'lucide-react';
 
 // Constants for improved AddRecipeView
 const COMMON_UNITS = [
@@ -268,6 +268,17 @@ const RecipeApp = () => {
   const [showRecipeSelector, setShowRecipeSelector] = useState(false);
   const [selectedDateForMealPlan, setSelectedDateForMealPlan] = useState<string | null>(null);
   const [selectedMealTypeForMealPlan, setSelectedMealTypeForMealPlan] = useState<string | null>(null);
+  const [darkMode, setDarkMode] = useState(() => {
+    // Check localStorage or system preference
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('darkMode');
+      if (saved !== null) return saved === 'true';
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
+  const [selectedRecipes, setSelectedRecipes] = useState<Set<string>>(new Set());
+  const [bulkMode, setBulkMode] = useState(false);
 
   const [user, setUser] = useState(null);
   const [error, setError] = useState<string | null>(null);
@@ -313,6 +324,16 @@ const RecipeApp = () => {
       loadData();
     }
   }, [user]);
+
+  // Dark Mode Effect
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('darkMode', darkMode.toString());
+  }, [darkMode]);
 
   // Debug: Zeige aktuelle View (muss vor conditional returns sein!)
   useEffect(() => {
@@ -657,6 +678,210 @@ const RecipeApp = () => {
     }
   };
 
+  // Duplicate Recipe
+  const duplicateRecipe = (recipe: any) => {
+    const newRecipe = {
+      ...recipe,
+      id: Date.now(),
+      title: `${recipe.title} (Kopie)`,
+      createdAt: new Date().toISOString(),
+      date: new Date().toISOString().split('T')[0],
+      rating: 0,
+      isFavorite: false,
+      favorite: false
+    };
+    const updated = [...recipes, newRecipe];
+    saveRecipes(updated);
+    setSelectedRecipe(newRecipe);
+    setEditingRecipe(newRecipe);
+    setView('edit');
+  };
+
+  // Export Recipes
+  const exportRecipes = () => {
+    const dataStr = JSON.stringify(recipes, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `phils-rezepte-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Import Recipes
+  const importRecipes = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json';
+    input.onchange = (e: any) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event: any) => {
+          try {
+            const imported = JSON.parse(event.target.result);
+            if (Array.isArray(imported)) {
+              if (confirm(`Möchtest du ${imported.length} Rezepte importieren?`)) {
+                // Merge with existing recipes (avoid duplicates by ID)
+                const existingIds = new Set(recipes.map((r: any) => r.id));
+                const newRecipes = imported.filter((r: any) => !existingIds.has(r.id));
+                const updated = [...recipes, ...newRecipes];
+                saveRecipes(updated);
+                alert(`${newRecipes.length} neue Rezepte importiert!`);
+              }
+            } else {
+              alert('Ungültiges Dateiformat!');
+            }
+          } catch (err) {
+            alert('Fehler beim Importieren der Datei!');
+            console.error(err);
+          }
+        };
+        reader.readAsText(file);
+      }
+    };
+    input.click();
+  };
+
+  // Print Recipe
+  const printRecipe = (recipe: any) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    
+    const factor = servings / recipe.servings;
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${recipe.title}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+            h1 { color: #ea580c; border-bottom: 3px solid #ea580c; padding-bottom: 10px; }
+            .info { display: flex; gap: 20px; margin: 20px 0; flex-wrap: wrap; }
+            .section { margin: 30px 0; }
+            h2 { color: #ea580c; margin-top: 30px; }
+            ul { list-style: none; padding: 0; }
+            li { padding: 8px 0; border-bottom: 1px solid #eee; }
+            .step { margin: 15px 0; padding-left: 30px; position: relative; }
+            .step-number { position: absolute; left: 0; font-weight: bold; color: #ea580c; }
+            img { max-width: 100%; height: auto; border-radius: 10px; margin: 20px 0; }
+            @media print { .no-print { display: none; } }
+          </style>
+        </head>
+        <body>
+          ${recipe.image ? `<img src="${recipe.image}" alt="${recipe.title}" />` : ''}
+          <h1>${recipe.title}</h1>
+          <div class="info">
+            ${recipe.servings ? `<div><strong>Portionen:</strong> ${servings}</div>` : ''}
+            ${recipe.prepTime || recipe.cookTime ? `<div><strong>Zeit:</strong> ${(recipe.prepTime || 0) + (recipe.cookTime || 0)} Min</div>` : ''}
+            ${recipe.difficulty ? `<div><strong>Schwierigkeit:</strong> ${recipe.difficulty}</div>` : ''}
+            ${recipe.category ? `<div><strong>Kategorie:</strong> ${recipe.category}</div>` : ''}
+          </div>
+          ${recipe.tags && recipe.tags.length > 0 ? `<div><strong>Tags:</strong> ${recipe.tags.join(', ')}</div>` : ''}
+          
+          <div class="section">
+            <h2>Zutaten</h2>
+            <ul>
+              ${recipe.ingredients.map((ing: any) => {
+                const amount = typeof ing === 'string' ? ing : `${parseFloat((parseFloat(ing.amount || '0') * factor).toFixed(1))} ${ing.unit || ''} ${ing.name || ing}`;
+                return `<li>${amount.trim()}</li>`;
+              }).join('')}
+            </ul>
+          </div>
+          
+          <div class="section">
+            <h2>Zubereitung</h2>
+            ${recipe.steps.map((step: string, idx: number) => 
+              `<div class="step"><span class="step-number">${idx + 1}.</span> ${step}</div>`
+            ).join('')}
+          </div>
+          
+          ${recipe.notes ? `<div class="section"><h2>Notizen</h2><p>${recipe.notes}</p></div>` : ''}
+        </body>
+      </html>
+    `;
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
+  // Share Recipe
+  const shareRecipe = (recipe: any) => {
+    const factor = servings / recipe.servings;
+    const ingredientsText = recipe.ingredients.map((ing: any) => {
+      if (typeof ing === 'string') return `• ${ing}`;
+      const amount = parseFloat((parseFloat(ing.amount || '0') * factor).toFixed(1));
+      return `• ${amount} ${ing.unit || ''} ${ing.name || ing}`;
+    }).join('\n');
+    
+    const stepsText = recipe.steps.map((step: string, idx: number) => `${idx + 1}. ${step}`).join('\n');
+    
+    const shareText = `🍳 ${recipe.title}\n\n` +
+      `${recipe.servings ? `Portionen: ${servings}\n` : ''}` +
+      `${recipe.prepTime || recipe.cookTime ? `Zeit: ${(recipe.prepTime || 0) + (recipe.cookTime || 0)} Min\n` : ''}` +
+      `${recipe.difficulty ? `Schwierigkeit: ${recipe.difficulty}\n` : ''}\n` +
+      `ZUTATEN:\n${ingredientsText}\n\n` +
+      `ZUBEREITUNG:\n${stepsText}` +
+      `${recipe.notes ? `\n\nNOTIZEN:\n${recipe.notes}` : ''}`;
+    
+    if (navigator.share) {
+      navigator.share({
+        title: recipe.title,
+        text: shareText
+      }).catch(() => {
+        // Fallback: Copy to clipboard
+        navigator.clipboard.writeText(shareText).then(() => {
+          alert('Rezept in Zwischenablage kopiert!');
+        });
+      });
+    } else {
+      // Fallback: Copy to clipboard
+      navigator.clipboard.writeText(shareText).then(() => {
+        alert('Rezept in Zwischenablage kopiert!');
+      });
+    }
+  };
+
+  // Bulk Operations
+  const toggleRecipeSelection = (id: string) => {
+    setSelectedRecipes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const deleteSelectedRecipes = () => {
+    if (selectedRecipes.size === 0) return;
+    if (confirm(`Möchtest du ${selectedRecipes.size} Rezept(e) wirklich löschen?`)) {
+      const updated = recipes.filter((r: any) => !selectedRecipes.has(r.id));
+      saveRecipes(updated);
+      setSelectedRecipes(new Set());
+      setBulkMode(false);
+    }
+  };
+
+  const toggleFavoriteSelected = () => {
+    if (selectedRecipes.size === 0) return;
+    const updated = recipes.map((r: any) => 
+      selectedRecipes.has(r.id) 
+        ? { ...r, isFavorite: !r.isFavorite, favorite: !r.isFavorite }
+        : r
+    );
+    saveRecipes(updated);
+    setSelectedRecipes(new Set());
+    setBulkMode(false);
+  };
+
   // Improved favorite toggle with useCallback
   const toggleFavorite = useCallback((id) => {
     const updated = recipes.map(r => {
@@ -763,38 +988,45 @@ const RecipeApp = () => {
     return sortRecipes(filtered, sortBy, sortOrder);
   }, [recipes, searchTerm, filters, sortBy, sortOrder]);
 
-  // Home View
-  const HomeView = () => (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
+  // Home view: function so it's evaluated at render time (BottomNav in scope) and returns JSX, not a component — search input keeps focus
+  const getHomeViewContent = () => (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 dark:from-gray-900 dark:to-gray-800">
       <div className="max-w-4xl mx-auto p-4 sm:p-6 pb-24">
         <header className="mb-6 sm:mb-8 pt-4 sm:pt-6">
           <div className="flex items-center justify-between mb-4 sm:mb-6 gap-2">
             <div className="flex items-center gap-2 sm:gap-3">
               <ChefHat className="w-8 h-8 sm:w-10 sm:h-10 text-orange-600" />
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Phils Rezepte</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">Phils Rezepte</h1>
             </div>
 
-            <div className="relative">
+            <div className="relative flex items-center gap-2">
+              <button
+                onClick={() => setDarkMode(!darkMode)}
+                className="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition min-h-[44px]"
+                title={darkMode ? 'Hell-Modus' : 'Dunkel-Modus'}
+              >
+                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
               {user ? (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setShowUserMenu(!showUserMenu)}
-                    className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 bg-white rounded-xl border-2 border-gray-200 text-gray-700 font-medium min-h-[44px]"
+                    className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium min-h-[44px]"
                   >
                     <Users className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span className="text-xs sm:text-sm hidden sm:inline">{user.email?.split('@')[0]}</span>
                   </button>
 
                   {showUserMenu && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-50">
-                      <div className="p-3 text-xs sm:text-sm text-gray-700 break-all">{user.email}</div>
-                      <div className="border-t" />
+                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 z-50">
+                      <div className="p-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300 break-all">{user.email}</div>
+                      <div className="border-t dark:border-gray-700" />
                       <button
                         onClick={() => {
                           setShowUserMenu(false);
                           signOut();
                         }}
-                        className="w-full text-left px-3 py-3 hover:bg-gray-50 min-h-[44px] text-sm"
+                        className="w-full text-left px-3 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 min-h-[44px] text-sm text-gray-700 dark:text-gray-300"
                       >
                         Abmelden
                       </button>
@@ -817,9 +1049,41 @@ const RecipeApp = () => {
           </div>
 
           <div className="flex gap-2 mb-3 sm:mb-4 flex-wrap">
+            {bulkMode && (
+              <div className="w-full flex items-center justify-between p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl mb-2">
+                <span className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                  {selectedRecipes.size} ausgewählt
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={toggleFavoriteSelected}
+                    className="px-3 py-1.5 bg-yellow-500 text-white rounded-lg text-sm font-medium min-h-[36px]"
+                  >
+                    <Star className="w-4 h-4 inline mr-1" />
+                    Favorit
+                  </button>
+                  <button
+                    onClick={deleteSelectedRecipes}
+                    className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-sm font-medium min-h-[36px]"
+                  >
+                    <Trash2 className="w-4 h-4 inline mr-1" />
+                    Löschen
+                  </button>
+                  <button
+                    onClick={() => {
+                      setBulkMode(false);
+                      setSelectedRecipes(new Set());
+                    }}
+                    className="px-3 py-1.5 bg-gray-500 text-white rounded-lg text-sm font-medium min-h-[36px]"
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+              </div>
+            )}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-2 bg-white rounded-xl border-2 border-gray-200 text-gray-700 font-medium active:scale-95 transition min-h-[44px] text-sm sm:text-base"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-2 bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium active:scale-95 transition min-h-[44px] text-sm sm:text-base"
             >
               <SlidersHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
               Filter
@@ -827,12 +1091,12 @@ const RecipeApp = () => {
                 <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
               )}
             </button>
-            <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-2 bg-white rounded-xl border-2 border-gray-200 min-h-[44px]">
-              <label className="text-xs sm:text-sm font-medium text-gray-700 hidden sm:inline">Sortieren:</label>
+            <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-2 bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 min-h-[44px]">
+              <label className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:inline">Sortieren:</label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="border-0 focus:outline-none text-xs sm:text-sm font-medium text-gray-700 cursor-pointer min-h-[32px]"
+                className="border-0 focus:outline-none text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 bg-transparent cursor-pointer min-h-[32px]"
               >
                 <option value="date">Datum</option>
                 <option value="title">Titel</option>
@@ -841,7 +1105,7 @@ const RecipeApp = () => {
               </select>
               <button
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="text-gray-600 hover:text-gray-800 min-w-[32px] min-h-[32px] flex items-center justify-center text-lg"
+                className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 min-w-[32px] min-h-[32px] flex items-center justify-center text-lg"
                 title={sortOrder === 'asc' ? 'Aufsteigend' : 'Absteigend'}
               >
                 {sortOrder === 'asc' ? '↑' : '↓'}
@@ -849,12 +1113,41 @@ const RecipeApp = () => {
             </div>
             <button
               onClick={() => setShowCategoryManager(!showCategoryManager)}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-2 bg-white rounded-xl border-2 border-gray-200 text-gray-700 font-medium active:scale-95 transition min-h-[44px] text-sm sm:text-base"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-2 bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium active:scale-95 transition min-h-[44px] text-sm sm:text-base"
             >
               <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden sm:inline">Kategorien</span>
               <span className="sm:hidden">Kat.</span>
             </button>
+            <button
+              onClick={() => setBulkMode(!bulkMode)}
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl border-2 font-medium active:scale-95 transition min-h-[44px] text-sm sm:text-base ${
+                bulkMode 
+                  ? 'bg-orange-500 text-white border-orange-500' 
+                  : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Auswahl</span>
+            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={exportRecipes}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 bg-green-500 text-white rounded-xl font-medium active:scale-95 transition shadow-lg hover:bg-green-600 min-h-[44px] text-xs sm:text-sm"
+                title="Rezepte exportieren"
+              >
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">Export</span>
+              </button>
+              <button
+                onClick={importRecipes}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 bg-blue-500 text-white rounded-xl font-medium active:scale-95 transition shadow-lg hover:bg-blue-600 min-h-[44px] text-xs sm:text-sm"
+                title="Rezepte importieren"
+              >
+                <Upload className="w-4 h-4" />
+                <span className="hidden sm:inline">Import</span>
+              </button>
+            </div>
           </div>
 
           {showCategoryManager && (
@@ -967,13 +1260,38 @@ const RecipeApp = () => {
               <div
                 key={recipe.id}
                 onClick={() => {
-                  setSelectedRecipe(recipe);
-                  setServings(recipe.servings);
-                  setCurrentStepIndex(0);
-                  setView('detail');
+                  if (bulkMode) {
+                    toggleRecipeSelection(recipe.id);
+                  } else {
+                    setSelectedRecipe(recipe);
+                    setServings(recipe.servings);
+                    setCurrentStepIndex(0);
+                    setView('detail');
+                  }
                 }}
-                className="bg-white rounded-2xl sm:rounded-3xl shadow-lg overflow-hidden cursor-pointer transform transition hover:scale-105 active:scale-95 relative"
+                className={`bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl shadow-lg overflow-hidden transform transition relative ${
+                  bulkMode 
+                    ? 'cursor-pointer' 
+                    : 'cursor-pointer hover:scale-105 active:scale-95'
+                } ${
+                  selectedRecipes.has(recipe.id) 
+                    ? 'ring-4 ring-orange-500 dark:ring-orange-400' 
+                    : ''
+                }`}
               >
+                {bulkMode && (
+                  <div className="absolute top-2 left-2 z-10">
+                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                      selectedRecipes.has(recipe.id)
+                        ? 'bg-orange-500 border-orange-500'
+                        : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'
+                    }`}>
+                      {selectedRecipes.has(recipe.id) && (
+                        <Check className="w-4 h-4 text-white" />
+                      )}
+                    </div>
+                  </div>
+                )}
                 {(recipe.isFavorite || recipe.favorite) && (
                   <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-10">
                     <Star className="w-5 h-5 sm:w-6 sm:h-6 fill-yellow-400 text-yellow-400" />
@@ -985,7 +1303,7 @@ const RecipeApp = () => {
                   </div>
                 )}
                 <div className="p-4 sm:p-5">
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 sm:mb-3 line-clamp-2">{recipe.title}</h3>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100 mb-2 sm:mb-3 line-clamp-2">{recipe.title}</h3>
                   <div className="flex gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 flex-wrap">
                     <div className="flex items-center gap-1">
                       <Users className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -1061,7 +1379,7 @@ const RecipeApp = () => {
     const [editedNotes, setEditedNotes] = useState(selectedRecipe.notes || '');
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 pb-24">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 dark:from-gray-900 dark:to-gray-800 pb-24">
         <div className="max-w-3xl mx-auto">
           {selectedRecipe.image && (
             <div className="h-48 sm:h-64 overflow-hidden bg-gray-100">
@@ -1073,32 +1391,58 @@ const RecipeApp = () => {
             <div className="flex items-center justify-between mb-4 gap-2">
               <button
                 onClick={() => setView('home')}
-                className="flex items-center gap-2 text-orange-600 font-medium text-base sm:text-lg min-h-[44px] px-2 -ml-2"
+                className="flex items-center gap-2 text-orange-600 dark:text-orange-400 font-medium text-base sm:text-lg min-h-[44px] px-2 -ml-2"
               >
                 <ArrowLeft className="w-5 h-5" />
                 <span>Zurück</span>
               </button>
-              <button
-                onClick={() => {
-                  console.log('Bearbeiten geklickt', selectedRecipe);
-                  if (selectedRecipe) {
-                    setEditingRecipe(selectedRecipe);
-                    setView('edit');
-                    console.log('View auf edit gesetzt, editingRecipe:', selectedRecipe);
-                  } else {
-                    alert('Fehler: Rezept nicht gefunden');
-                  }
-                }}
-                className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-2 bg-blue-500 text-white rounded-xl font-medium active:scale-95 transition shadow-lg hover:bg-blue-600 min-h-[44px] text-sm sm:text-base"
-              >
-                <Edit2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="hidden sm:inline">Bearbeiten</span>
-                <span className="sm:hidden">Edit</span>
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => duplicateRecipe(selectedRecipe)}
+                  className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 bg-green-500 text-white rounded-xl font-medium active:scale-95 transition shadow-lg hover:bg-green-600 min-h-[44px] text-xs sm:text-sm"
+                  title="Rezept duplizieren"
+                >
+                  <Copy className="w-4 h-4" />
+                  <span className="hidden sm:inline">Duplizieren</span>
+                </button>
+                <button
+                  onClick={() => printRecipe(selectedRecipe)}
+                  className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 bg-purple-500 text-white rounded-xl font-medium active:scale-95 transition shadow-lg hover:bg-purple-600 min-h-[44px] text-xs sm:text-sm"
+                  title="Rezept drucken"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span className="hidden sm:inline">Drucken</span>
+                </button>
+                <button
+                  onClick={() => shareRecipe(selectedRecipe)}
+                  className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 bg-indigo-500 text-white rounded-xl font-medium active:scale-95 transition shadow-lg hover:bg-indigo-600 min-h-[44px] text-xs sm:text-sm"
+                  title="Rezept teilen"
+                >
+                  <Share2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Teilen</span>
+                </button>
+                <button
+                  onClick={() => {
+                    console.log('Bearbeiten geklickt', selectedRecipe);
+                    if (selectedRecipe) {
+                      setEditingRecipe(selectedRecipe);
+                      setView('edit');
+                      console.log('View auf edit gesetzt, editingRecipe:', selectedRecipe);
+                    } else {
+                      alert('Fehler: Rezept nicht gefunden');
+                    }
+                  }}
+                  className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 bg-blue-500 text-white rounded-xl font-medium active:scale-95 transition shadow-lg hover:bg-blue-600 min-h-[44px] text-xs sm:text-sm"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Bearbeiten</span>
+                  <span className="sm:hidden">Edit</span>
+                </button>
+              </div>
             </div>
 
             <div className="flex justify-between items-start mb-4 gap-2">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 flex-1 pr-2">{selectedRecipe.title}</h1>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 dark:text-gray-100 flex-1 pr-2">{selectedRecipe.title}</h1>
               <div className="flex gap-2 flex-shrink-0">
                 <button
                   onClick={() => toggleFavorite(selectedRecipe.id)}
@@ -2687,7 +3031,7 @@ const RecipeApp = () => {
         </div>
       )}
       
-      {view === 'home' && <HomeView />}
+      {view === 'home' && getHomeViewContent()}
       {view === 'detail' && <DetailView />}
       {view === 'cooking' && <CookingView />}
       {(view === 'add' || view === 'edit') && <AddRecipeView />}
