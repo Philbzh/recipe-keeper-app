@@ -45,7 +45,7 @@ const RecipeApp = () => {
   const [recipes, setRecipes] = useState([]);
   const [shoppingList, setShoppingList] = useState([]);
   const [mealPlans, setMealPlans] = useState([]);
-  // Kategorien laut IMPROVEMENTS_SPEC: 8 Hauptkategorien, zweistufig (Emoji-Button → Unterkategorie)
+  // Hauptkategorien mit Unterkategorien – Emoji + Name sichtbar, inkl. Gewürze & Saucen
   const [categoryStructure] = useState({
     '🥗 Vorspeisen': ['Suppen', 'Salate', 'Fingerfood', 'Dips'],
     '🍖 Hauptgerichte': ['Fleisch', 'Fisch', 'Vegetarisch', 'Vegan', 'Pasta', 'Pizza'],
@@ -54,7 +54,9 @@ const RecipeApp = () => {
     '🥐 Gebäck': ['Kekse', 'Muffins', 'Croissants', 'Donuts'],
     '🍞 Brot': ['Weißbrot', 'Vollkorn', 'Brötchen', 'Baguette'],
     '🍨 Desserts': ['Eis', 'Cremes', 'Pudding', 'Tiramisu'],
-    '🍳 Frühstück': ['Müsli', 'Pancakes', 'Waffeln', 'Eiergerichte']
+    '🍳 Frühstück': ['Müsli', 'Pancakes', 'Waffeln', 'Eiergerichte'],
+    '🌶️ Gewürze & Mischungen': ['Gewürzmischungen', 'BBQ-Rubs', 'Curry', 'Kräutermischungen', 'Salz & Zucker'],
+    '🥫 Saucen': ['Basis-Saucen', 'Grillsaucen', 'Pesto', 'Salsa', 'Chutneys']
   });
 
   // Flatten categories for backward compatibility (stores as "Main > Sub")
@@ -2018,31 +2020,28 @@ const RecipeApp = () => {
 
             <div className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
               <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Kategorie</label>
-              {/* Schritt 1: Hauptkategorie als Emoji-Buttons (max 3 Zeilen, flex-nowrap) */}
-              <div className="grid grid-cols-4 gap-2 mb-3 flex-nowrap">
-                {Object.keys(categoryStructure).map((mainCat) => {
-                  const emoji = mainCat.split(' ')[0] || mainCat;
-                  return (
-                    <button
-                      key={mainCat}
-                      type="button"
-                      onClick={() => {
-                        setMainCategory(mainCat);
-                        setSubCategory('');
-                      }}
-                      className={`aspect-square rounded-xl flex items-center justify-center text-2xl sm:text-3xl transition min-w-0 truncate ${
-                        mainCategory === mainCat
-                          ? 'bg-orange-500 text-white scale-105 ring-2 ring-orange-400'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                      title={mainCat}
-                    >
-                      {emoji}
-                    </button>
-                  );
-                })}
+              {/* Kompakte Pill-Buttons: Emoji + Name, nicht überdimensioniert */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                {Object.keys(categoryStructure).map((mainCat) => (
+                  <button
+                    key={mainCat}
+                    type="button"
+                    onClick={() => {
+                      setMainCategory(mainCat);
+                      setSubCategory('');
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
+                      mainCategory === mainCat
+                        ? 'bg-orange-500 text-white ring-2 ring-orange-400'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    <span className="text-base leading-none">{mainCat.split(' ')[0]}</span>
+                    <span>{mainCat.split(' ').slice(1).join(' ')}</span>
+                  </button>
+                ))}
               </div>
-              {/* Schritt 2: Unterkategorie (nur wenn Hauptkategorie gewählt oder bestehende Kategorie) */}
+              {/* Schritt 2: Unterkategorie */}
               {(mainCategory || subCategory) && (
                 <div className="mt-2">
                   <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Unterkategorie</label>
