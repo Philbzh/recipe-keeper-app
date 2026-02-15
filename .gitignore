@@ -41,3 +41,7 @@ build/
 # Cache
 .cache/
 *.cache
+
+# Generated images (lokale Platzhalter, nicht versionieren)
+Generated_image.png
+Generated_image2.png
