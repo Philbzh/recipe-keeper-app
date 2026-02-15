@@ -1,0 +1,9 @@
+# Einheitliche Zeilenumbrüche (LF) für Code – verhindert "hängende" Commits auf Windows
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.md text eol=lf
