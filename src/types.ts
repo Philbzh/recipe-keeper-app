@@ -73,6 +73,7 @@ export interface AppState {
   recipes: Recipe[];
   shoppingList: ShoppingItem[];
   categories: string[];
+  categoryStructure?: Record<string, string[]>;
   mealPlans: MealPlan[];
 }
 

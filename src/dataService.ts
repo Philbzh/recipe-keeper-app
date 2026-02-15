@@ -53,7 +53,7 @@ class RecipeDataService {
 
   private async loadFromSupabase(): Promise<Partial<AppState> | null> {
     try {
-      const keys = ['recipes', 'shopping-list', 'categories', 'meal-plans'];
+      const keys = ['recipes', 'shopping-list', 'categories', 'category_structure', 'meal-plans'];
       const promises = keys.map(key =>
         this.supabase
           .from('kv')
@@ -63,12 +63,13 @@ class RecipeDataService {
       );
 
       const results = await Promise.all(promises);
-      
+
       return {
         recipes: results[0].data?.value || [],
         shoppingList: results[1].data?.value || [],
         categories: results[2].data?.value || [],
-        mealPlans: results[3].data?.value || []
+        categoryStructure: results[3].data?.value || undefined,
+        mealPlans: results[4].data?.value || []
       };
     } catch (error) {
       console.warn('Supabase load failed, using localStorage:', error);
@@ -78,10 +79,12 @@ class RecipeDataService {
 
   private loadFromLocalStorage(): Partial<AppState> {
     try {
+      const catStruct = localStorage.getItem('category_structure');
       return {
         recipes: JSON.parse(localStorage.getItem('recipes') || '[]'),
         shoppingList: JSON.parse(localStorage.getItem('shopping-list') || '[]'),
         categories: JSON.parse(localStorage.getItem('categories') || '[]'),
+        categoryStructure: catStruct ? JSON.parse(catStruct) : undefined,
         mealPlans: JSON.parse(localStorage.getItem('meal-plans') || '[]')
       };
     } catch (error) {
@@ -167,6 +170,10 @@ class RecipeDataService {
     return this.save('categories', categories);
   }
 
+  async saveCategoryStructure(structure: Record<string, string[]>): Promise<boolean> {
+    return this.save('category_structure', structure);
+  }
+
   async saveMealPlans(plans: MealPlan[]): Promise<boolean> {
     return this.save('meal-plans', plans);
   }
@@ -197,6 +204,7 @@ class RecipeDataService {
         if (data.recipes) localStorage.setItem('recipes', JSON.stringify(data.recipes));
         if (data.shoppingList) localStorage.setItem('shopping-list', JSON.stringify(data.shoppingList));
         if (data.categories) localStorage.setItem('categories', JSON.stringify(data.categories));
+        if (data.categoryStructure) localStorage.setItem('category_structure', JSON.stringify(data.categoryStructure));
         if (data.mealPlans) localStorage.setItem('meal-plans', JSON.stringify(data.mealPlans));
       }
       return data;

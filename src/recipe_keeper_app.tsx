@@ -45,8 +45,8 @@ const RecipeApp = () => {
   const [recipes, setRecipes] = useState([]);
   const [shoppingList, setShoppingList] = useState([]);
   const [mealPlans, setMealPlans] = useState([]);
-  // Hauptkategorien mit Unterkategorien – Emoji + Name sichtbar, inkl. Gewürze & Saucen
-  const [categoryStructure] = useState({
+  // Standard-Kategorien (wird überschrieben, wenn gespeicherte Struktur geladen wird)
+  const DEFAULT_CATEGORY_STRUCTURE: Record<string, string[]> = {
     '🥗 Vorspeisen': ['Suppen', 'Salate', 'Fingerfood', 'Dips'],
     '🍖 Hauptgerichte': ['Fleisch', 'Fisch', 'Vegetarisch', 'Vegan', 'Pasta', 'Pizza'],
     '🥔 Beilagen': ['Kartoffeln', 'Gemüse', 'Reis', 'Salate'],
@@ -57,16 +57,27 @@ const RecipeApp = () => {
     '🍳 Frühstück': ['Müsli', 'Pancakes', 'Waffeln', 'Eiergerichte'],
     '🌶️ Gewürze & Mischungen': ['Gewürzmischungen', 'BBQ-Rubs', 'Curry', 'Kräutermischungen', 'Salz & Zucker'],
     '🥫 Saucen': ['Basis-Saucen', 'Grillsaucen', 'Pesto', 'Salsa', 'Chutneys']
+  };
+
+  const [categoryStructure, setCategoryStructure] = useState<Record<string, string[]>>(() => {
+    try {
+      const s = typeof window !== 'undefined' ? localStorage.getItem('category_structure') : null;
+      if (s) {
+        const parsed = JSON.parse(s);
+        if (parsed && typeof parsed === 'object') return parsed;
+      }
+    } catch (_) {}
+    return { ...DEFAULT_CATEGORY_STRUCTURE };
   });
 
-  // Flatten categories for backward compatibility (stores as "Main > Sub")
-  const [categories, setCategories] = useState(() => {
-    const flat = [];
+  // Aus Struktur abgeleitete flache Liste (für Filter-Dropdown)
+  const categories = useMemo(() => {
+    const flat: string[] = [];
     Object.entries(categoryStructure).forEach(([main, subs]) => {
       subs.forEach(sub => flat.push(`${main} > ${sub}`));
     });
     return flat;
-  });
+  }, [categoryStructure]);
   const [view, setView] = useState<'home' | 'detail' | 'add' | 'edit' | 'shopping' | 'cooking' | 'mealplan'>('home');
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [editingRecipe, setEditingRecipe] = useState(null);
@@ -167,12 +178,23 @@ const RecipeApp = () => {
     setLoading(true);
     try {
       if (dataService) {
-        // Use improved data service
         const data = await dataService.loadAll();
         if (data.recipes) setRecipes(data.recipes);
         if (data.shoppingList) setShoppingList(data.shoppingList);
-        if (data.categories && data.categories.length > 0) {
-          setCategories(data.categories);
+        if (data.categoryStructure && Object.keys(data.categoryStructure).length > 0) {
+          setCategoryStructure(data.categoryStructure);
+        } else if (data.categories && Array.isArray(data.categories) && data.categories.length > 0) {
+          const built: Record<string, string[]> = {};
+          (data.categories as string[]).forEach((cat: string) => {
+            if (cat && cat.includes(' > ')) {
+              const [main, sub] = cat.split(' > ');
+              if (main && sub) {
+                if (!built[main]) built[main] = [];
+                if (!built[main].includes(sub)) built[main].push(sub);
+              }
+            }
+          });
+          if (Object.keys(built).length > 0) setCategoryStructure(built);
         }
         if (data.mealPlans) setMealPlans(data.mealPlans);
       } else {
@@ -203,33 +225,58 @@ const RecipeApp = () => {
               setShoppingList(shoppingRow.value);
             }
 
-            const { data: categoriesRow, error: categoriesError } = await supabase
-              .from('kv')
-              .select('value')
-              .eq('key', cKey)
-              .single();
+            const { data: categoriesRow } = await supabase.from('kv').select('value').eq('key', cKey).single();
+            const { data: structureRow } = await supabase.from('kv').select('value').eq('key', kvKey('category_structure')).single();
 
-            if (!categoriesError && categoriesRow?.value) {
-              setCategories(categoriesRow.value);
+            if (structureRow?.value && typeof structureRow.value === 'object') {
+              setCategoryStructure(structureRow.value);
+            } else if (categoriesRow?.value && Array.isArray(categoriesRow.value) && categoriesRow.value.length > 0) {
+              const built: Record<string, string[]> = {};
+              categoriesRow.value.forEach((cat: string) => {
+                if (cat && cat.includes(' > ')) {
+                  const [main, sub] = cat.split(' > ');
+                  if (main && sub) {
+                    if (!built[main]) built[main] = [];
+                    if (!built[main].includes(sub)) built[main].push(sub);
+                  }
+                }
+              });
+              if (Object.keys(built).length > 0) setCategoryStructure(built);
             }
           } catch (err) {
             console.log('Supabase load failed, falling back to localStorage', err);
           }
         }
 
-        // Fallback / localStorage
         const recipesData = localStorage.getItem('recipes');
         const shoppingData = localStorage.getItem('shopping-list');
+        const structureData = localStorage.getItem('category_structure');
         const categoriesData = localStorage.getItem('categories');
 
-        if (recipesData) {
-          setRecipes(JSON.parse(recipesData));
-        }
-        if (shoppingData) {
-          setShoppingList(JSON.parse(shoppingData));
-        }
-        if (categoriesData) {
-          setCategories(JSON.parse(categoriesData));
+        if (recipesData) setRecipes(JSON.parse(recipesData));
+        if (shoppingData) setShoppingList(JSON.parse(shoppingData));
+        if (structureData) {
+          try {
+            const parsed = JSON.parse(structureData);
+            if (parsed && typeof parsed === 'object') setCategoryStructure(parsed);
+          } catch (_) {}
+        } else if (categoriesData) {
+          try {
+            const flat = JSON.parse(categoriesData);
+            if (Array.isArray(flat) && flat.length > 0) {
+              const built: Record<string, string[]> = {};
+              flat.forEach((cat: string) => {
+                if (cat && cat.includes(' > ')) {
+                  const [main, sub] = cat.split(' > ');
+                  if (main && sub) {
+                    if (!built[main]) built[main] = [];
+                    if (!built[main].includes(sub)) built[main].push(sub);
+                  }
+                }
+              });
+              if (Object.keys(built).length > 0) setCategoryStructure(built);
+            }
+          } catch (_) {}
         }
         const mealPlansData = localStorage.getItem('meal-plans');
         if (mealPlansData) {
@@ -304,25 +351,25 @@ const RecipeApp = () => {
     }
   }, [dataService]);
 
-  const saveCategories = useCallback(async (newCategories) => {
-    setCategories(newCategories); // Optimistic update
-    
+  const saveCategoryStructure = useCallback(async (newStructure: Record<string, string[]>) => {
+    setCategoryStructure(newStructure);
+    const flat: string[] = [];
+    Object.entries(newStructure).forEach(([main, subs]) => {
+      subs.forEach(sub => flat.push(`${main} > ${sub}`));
+    });
     if (dataService) {
-      await dataService.saveCategories(newCategories);
+      await dataService.saveCategoryStructure(newStructure);
+      await dataService.saveCategories(flat);
     } else {
-      // Fallback to original method
       try {
-        localStorage.setItem('categories', JSON.stringify(newCategories));
+        localStorage.setItem('category_structure', JSON.stringify(newStructure));
+        localStorage.setItem('categories', JSON.stringify(flat));
         if (isSupabaseConfigured && supabase) {
-          try {
-            await supabase.from('kv').upsert({ key: kvKey('categories'), value: newCategories });
-          } catch (err) {
-            console.error('Supabase save error (categories):', err);
-          }
+          await supabase.from('kv').upsert({ key: kvKey('category_structure'), value: newStructure });
+          await supabase.from('kv').upsert({ key: kvKey('categories'), value: flat });
         }
       } catch (error) {
-        console.error('Fehler beim Speichern der Kategorien:', error);
-        setError('Fehler beim Speichern der Kategorien');
+        console.error('Fehler beim Speichern der Kategorien', error);
       }
     }
   }, [dataService]);
@@ -394,32 +441,156 @@ const RecipeApp = () => {
     alert('Alle Zutaten der Woche zur Einkaufsliste hinzugefügt! 🛒');
   }, [mealPlans, recipes, shoppingList, saveShoppingList]);
 
-  const addCategory = () => {
-    if (newCategoryName.trim() && !categories.includes(newCategoryName.trim())) {
-      const updated = [...categories, newCategoryName.trim()];
-      saveCategories(updated);
-      setNewCategoryName('');
-    }
-  };
+  // Kategorie-Manager: bearbeitbare Haupt- und Unterkategorien
+  const CategoryManager = () => {
+    const [newMainName, setNewMainName] = useState('');
+    const [editingMain, setEditingMain] = useState<string | null>(null);
+    const [editingMainValue, setEditingMainValue] = useState('');
+    const [editingSub, setEditingSub] = useState<{ main: string; sub: string } | null>(null);
+    const [editingSubValue, setEditingSubValue] = useState('');
+    const [newSubByMain, setNewSubByMain] = useState<Record<string, string>>({});
 
-  const editCategory = (oldName, newName) => {
-    if (newName.trim() && newName.trim() !== oldName) {
-      const updated = categories.map(cat => cat === oldName ? newName.trim() : cat);
-      saveCategories(updated);
-      // Aktualisiere auch alle Rezepte mit dieser Kategorie
-      const updatedRecipes = recipes.map(recipe => 
-        recipe.category === oldName ? { ...recipe, category: newName.trim() } : recipe
-      );
-      saveRecipes(updatedRecipes);
-      setEditingCategory(null);
-    }
-  };
+    const applySave = (next: Record<string, string[]>) => {
+      saveCategoryStructure(next);
+    };
 
-  const deleteCategory = (categoryName) => {
-    if (confirm(`Kategorie "${categoryName}" wirklich löschen? Rezepte mit dieser Kategorie behalten sie, aber die Kategorie wird aus der Liste entfernt.`)) {
-      const updated = categories.filter(cat => cat !== categoryName);
-      saveCategories(updated);
-    }
+    const addMain = () => {
+      const name = newMainName.trim();
+      if (!name) return;
+      if (categoryStructure[name]) return;
+      applySave({ ...categoryStructure, [name]: [] });
+      setNewMainName('');
+    };
+
+    const renameMain = (oldName: string) => {
+      const newName = editingMainValue.trim();
+      if (!newName || newName === oldName) {
+        setEditingMain(null);
+        return;
+      }
+      const next = { ...categoryStructure };
+      next[newName] = next[oldName] || [];
+      delete next[oldName];
+      applySave(next);
+      setEditingMain(null);
+    };
+
+    const deleteMain = (mainName: string) => {
+      if (!confirm(`Hauptkategorie "${mainName}" und alle Unterkategorien löschen?`)) return;
+      const next = { ...categoryStructure };
+      delete next[mainName];
+      applySave(next);
+    };
+
+    const addSub = (mainName: string) => {
+      const name = (newSubByMain[mainName] || '').trim();
+      if (!name) return;
+      const subs = categoryStructure[mainName] || [];
+      if (subs.includes(name)) return;
+      applySave({ ...categoryStructure, [mainName]: [...subs, name] });
+      setNewSubByMain({ ...newSubByMain, [mainName]: '' });
+    };
+
+    const renameSub = (mainName: string, oldSub: string) => {
+      const newName = editingSubValue.trim();
+      if (!newName || newName === oldSub) {
+        setEditingSub(null);
+        return;
+      }
+      const subs = (categoryStructure[mainName] || []).map(s => s === oldSub ? newName : s);
+      applySave({ ...categoryStructure, [mainName]: subs });
+      setEditingSub(null);
+    };
+
+    const deleteSub = (mainName: string, subName: string) => {
+      const subs = (categoryStructure[mainName] || []).filter(s => s !== subName);
+      applySave({ ...categoryStructure, [mainName]: subs });
+    };
+
+    return (
+      <div className="mt-3 sm:mt-4 bg-white dark:bg-gray-800 rounded-2xl p-3 sm:p-4 shadow-lg dark:border dark:border-gray-700">
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
+          <h3 className="text-base sm:text-lg font-bold text-gray-800 dark:text-gray-100">Kategorien verwalten</h3>
+          <button type="button" onClick={() => setShowCategoryManager(false)} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 min-w-[44px] min-h-[44px] flex items-center justify-center">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex gap-2 mb-4">
+          <input
+            type="text"
+            value={newMainName}
+            onChange={(e) => setNewMainName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addMain()}
+            placeholder="Neue Hauptkategorie (z.B. 🍹 Getränke)"
+            className="flex-1 px-3 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 text-sm"
+          />
+          <button type="button" onClick={addMain} className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium text-sm whitespace-nowrap">
+            Hinzufügen
+          </button>
+        </div>
+
+        <div className="space-y-4 max-h-96 overflow-y-auto">
+          {Object.entries(categoryStructure).map(([mainCat, subCats]) => (
+            <div key={mainCat} className="border-b border-gray-200 dark:border-gray-600 pb-3 last:border-0">
+              {editingMain === mainCat ? (
+                <div className="flex gap-2 items-center mb-2">
+                  <input
+                    type="text"
+                    value={editingMainValue}
+                    onChange={(e) => setEditingMainValue(e.target.value)}
+                    className="flex-1 px-3 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                    autoFocus
+                  />
+                  <button type="button" onClick={() => renameMain(mainCat)} className="px-3 py-2 bg-green-500 text-white rounded-lg text-sm">Speichern</button>
+                  <button type="button" onClick={() => setEditingMain(null)} className="px-3 py-2 bg-gray-400 text-white rounded-lg text-sm">Abbrechen</button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-bold text-gray-800 dark:text-gray-100 text-sm sm:text-base flex-1">{mainCat}</span>
+                  <button type="button" onClick={() => { setEditingMain(mainCat); setEditingMainValue(mainCat); }} className="text-blue-600 dark:text-blue-400 text-xs font-medium">Bearbeiten</button>
+                  <button type="button" onClick={() => deleteMain(mainCat)} className="text-red-500 text-xs font-medium">Löschen</button>
+                </div>
+              )}
+              <div className="pl-2 space-y-1">
+                {(subCats || []).map((subCat) => (
+                  editingSub?.main === mainCat && editingSub?.sub === subCat ? (
+                    <div key={subCat} className="flex gap-2 items-center py-1">
+                      <input
+                        type="text"
+                        value={editingSubValue}
+                        onChange={(e) => setEditingSubValue(e.target.value)}
+                        className="flex-1 px-2 py-1 rounded border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 text-xs"
+                        autoFocus
+                      />
+                      <button type="button" onClick={() => renameSub(mainCat, subCat)} className="px-2 py-1 bg-green-500 text-white rounded text-xs">OK</button>
+                      <button type="button" onClick={() => setEditingSub(null)} className="px-2 py-1 bg-gray-400 text-white rounded text-xs">Abbr.</button>
+                    </div>
+                  ) : (
+                    <div key={subCat} className="flex items-center gap-2 py-0.5 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                      <span className="flex-1">• {subCat}</span>
+                      <button type="button" onClick={() => { setEditingSub({ main: mainCat, sub: subCat }); setEditingSubValue(subCat); }} className="text-blue-600 dark:text-blue-400 font-medium">Bearb.</button>
+                      <button type="button" onClick={() => deleteSub(mainCat, subCat)} className="text-red-500 font-medium">Löschen</button>
+                    </div>
+                  )
+                ))}
+                <div className="flex gap-2 mt-2">
+                  <input
+                    type="text"
+                    value={newSubByMain[mainCat] || ''}
+                    onChange={(e) => setNewSubByMain({ ...newSubByMain, [mainCat]: e.target.value })}
+                    onKeyDown={(e) => e.key === 'Enter' && addSub(mainCat)}
+                    placeholder="Neue Unterkategorie"
+                    className="flex-1 px-2 py-1.5 rounded border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 text-xs"
+                  />
+                  <button type="button" onClick={() => addSub(mainCat)} className="px-3 py-1.5 bg-orange-500 text-white rounded text-xs whitespace-nowrap">+ Unterkategorie</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   // Use improved mergeIngredients from utils (already imported)
@@ -1036,41 +1207,7 @@ const RecipeApp = () => {
             </div>
           </div>
 
-          {showCategoryManager && (
-            <div className="mt-3 sm:mt-4 bg-white rounded-2xl p-3 sm:p-4 shadow-lg">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h3 className="text-base sm:text-lg font-bold text-gray-800">Kategorien-Struktur</h3>
-                <button
-                  onClick={() => setShowCategoryManager(false)}
-                  className="text-gray-500 hover:text-gray-700 min-w-[44px] min-h-[44px] flex items-center justify-center"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              <div className="space-y-3 sm:space-y-4 mb-3 sm:mb-4 max-h-96 overflow-y-auto">
-                {Object.entries(categoryStructure).map(([mainCat, subCats]) => (
-                  <div key={mainCat} className="border-b border-gray-200 pb-2 sm:pb-3 last:border-0">
-                    <div className="font-bold text-gray-800 mb-2 text-sm sm:text-lg">{mainCat}</div>
-                    <div className="pl-3 sm:pl-4 space-y-1">
-                      {subCats.map((subCat) => {
-                        const fullCat = `${mainCat} > ${subCat}`;
-                        return (
-                          <div key={subCat} className="flex items-center gap-2 p-1 text-xs sm:text-sm text-gray-600">
-                            <span className="flex-1">• {subCat}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="text-xs text-gray-500 mt-3 sm:mt-4 p-2 sm:p-3 bg-gray-50 rounded-lg">
-                <strong>Hinweis:</strong> Die Kategorien-Struktur ist vordefiniert. Um Kategorien zu ändern, bearbeite den Code in <code>categoryStructure</code>.
-              </div>
-            </div>
-          )}
+          {showCategoryManager && <CategoryManager />}
 
           {showFilters && (
             <div className="mt-3 sm:mt-4 bg-white rounded-2xl p-3 sm:p-4 shadow-lg space-y-3">
