@@ -4,7 +4,9 @@ import Auth from './Auth';
 import RecipeDataService from './dataService';
 import { MealPlan, ShoppingCategory, ShoppingItem } from './types';
 import { searchRecipes, sortRecipes, generateId, mergeIngredients, groupByCategory, categorizeShoppingItem, parseIngredientInput } from './utils';
-import { Plus, Search, ShoppingCart, ChefHat, Users, Clock, ArrowLeft, Trash2, Check, X, Star, Mic, SlidersHorizontal, Share2, Play, Edit2, Settings, Calendar, GripVertical, ScanLine, Copy, Download, Upload, Printer, Moon, Sun, FileText } from 'lucide-react';
+import VoiceRecipeInput from './VoiceRecipeInput';
+import type { VoiceRecipeData } from './VoiceRecipeInput';
+import { Plus, Search, ShoppingCart, ChefHat, Users, Clock, ArrowLeft, Trash2, Check, X, Star, Mic, SlidersHorizontal, Share2, Play, Edit2, Settings, Calendar, GripVertical, ScanLine, Copy, Download, Upload, Printer, Moon, Sun, Camera } from 'lucide-react';
 
 // Constants for improved AddRecipeView
 const COMMON_UNITS = [
@@ -43,202 +45,16 @@ const RecipeApp = () => {
   const [recipes, setRecipes] = useState([]);
   const [shoppingList, setShoppingList] = useState([]);
   const [mealPlans, setMealPlans] = useState([]);
-  // Hierarchical category structure: Main categories with subcategories
-  // Version 2: Sehr detailliert für Back-Enthusiasten (16 Hauptkategorien, ~90 Unterkategorien)
+  // Kategorien laut IMPROVEMENTS_SPEC: 8 Hauptkategorien, zweistufig (Emoji-Button → Unterkategorie)
   const [categoryStructure] = useState({
-    // Vorspeisen
-    'Vorspeisen 🥗': [
-      'Suppen',
-      'Salate',
-      'Kalte Vorspeisen',
-      'Warme Vorspeisen',
-      'Fingerfood & Appetizer',
-      'Dips & Aufstriche'
-    ],
-
-    // Hauptgerichte
-    'Hauptspeisen 🍖': [
-      'Fleischgerichte',
-      'Fischgerichte', 
-      'Vegetarische Gerichte',
-      'Vegane Gerichte',
-      'Pasta & Nudeln',
-      'Pizza & Teigwaren',
-      'Reis & Getreide',
-      'Eintöpfe & Currys'
-    ],
-
-    // Beilagen
-    'Beilagen 🥔': [
-      'Kartoffeln',
-      'Gemüse',
-      'Reis & Getreide',
-      'Salate',
-      'Saucen'
-    ],
-
-    // KUCHEN & TORTEN - Detailliert
-    'Kuchen & Torten 🎂': [
-      'Rührkuchen',
-      'Blechkuchen',
-      'Motivtorten',
-      'Obstkuchen',
-      'Käsekuchen',
-      'Schokokuchen',
-      'Biskuit & Rouladen',
-      'Gugelhupf & Bundt Cakes'
-    ],
-
-    // TARTES & PIES
-    'Tartes & Pies 🥧': [
-      'Obsttartes',
-      'Cremetartes',
-      'Quiche (herzhaft)',
-      'Galettes',
-      'Pies (amerikanisch)',
-      'Flammkuchen'
-    ],
-
-    // GEBÄCK - Klein & Fein
-    'Gebäck & Kleinigkeiten 🥐': [
-      'Croissants',
-      'Blätterteig-Gebäck',
-      'Plunder & Teilchen',
-      'Eclairs & Windbeutel',
-      'Donuts & Krapfen',
-      'Berliner & Gefülltes',
-      'Muffins & Cupcakes'
-    ],
-
-    // KEKSE & KONFEKT
-    'Kekse & Konfekt 🍪': [
-      'Butterkekse',
-      'Mürbeteig-Kekse',
-      'Doppelkekse',
-      'Makronen',
-      'Amerikaner & Cookies',
-      'Weihnachtsplätzchen',
-      'Brownies & Blondies',
-      'Riegel & Schnitten'
-    ],
-
-    // HEFEGEBÄCK
-    'Hefegebäck & Brioche 🥖': [
-      'Brioche',
-      'Zimtschnecken',
-      'Hefezopf',
-      'Süße Brötchen',
-      'Buchteln',
-      'Babka',
-      'Stollen',
-      'Panettone'
-    ],
-
-    // WAFFELN & PANCAKES - Eigene Kategorie!
-    'Waffeln & Pancakes 🧇': [
-      'Belgische Waffeln',
-      'Lütticher Waffeln',
-      'Herzhafte Waffeln',
-      'Amerikanische Pancakes',
-      'Buttermilk Pancakes',
-      'Crêpes',
-      'Dutch Baby',
-      'Blinis'
-    ],
-
-    // CREMES & DESSERTS
-    'Cremes & Desserts 🍮': [
-      'Tiramisu',
-      'Panna Cotta',
-      'Pudding',
-      'Mousse',
-      'Crème Brûlée',
-      'Schichtdesserts',
-      'Parfaits',
-      'Trifle'
-    ],
-
-    // EIS & GEFRORENES
-    'Eis & Gefrorenes 🍨': [
-      'Eiscreme',
-      'Sorbets',
-      'Frozen Yogurt',
-      'Nicecream',
-      'Granita',
-      'Semifreddo'
-    ],
-
-    // BROT & BRÖTCHEN
-    'Brot & Brötchen 🍞': [
-      'Weißbrot',
-      'Vollkornbrot',
-      'Sauerteigbrot',
-      'Brötchen',
-      'Baguette',
-      'Focaccia',
-      'Bagels',
-      'Fladenbrot'
-    ],
-
-    // GEWÜRZE & MISCHUNGEN - Für deine Kreationen!
-    'Gewürze & Mischungen 🌶️': [
-      'Gewürzmischungen',
-      'BBQ-Rubs',
-      'Curry-Pulver',
-      'Kräutermischungen',
-      'Salz-Variationen',
-      'Zucker-Variationen',
-      'Zimt-Zucker & Co',
-      'Chai- & Tee-Mischungen'
-    ],
-
-    // GRUNDREZEPTE & BASICS
-    'Grundrezepte & Basics 📋': [
-      'Teig-Grundrezepte',
-      'Basis-Cremes',
-      'Glasuren & Frostings',
-      'Füllungen',
-      'Sirup & Tränken',
-      'Marinaden',
-      'Würzsaucen',
-      'Aromatisierte Öle'
-    ],
-
-    // FRÜHSTÜCK
-    'Frühstück & Brunch 🍳': [
-      'Müsli & Granola',
-      'Porridge & Oats',
-      'Smoothie Bowls',
-      'Marmeladen',
-      'Aufstriche',
-      'Eiergerichte'
-    ],
-
-    // Snacks
-    'Snacks 🍿': [
-      'Fingerfood',
-      'Energy Balls',
-      'Chips & Crackers',
-      'Popcorn-Varianten'
-    ],
-
-    // Getränke
-    'Getränke ☕': [
-      'Heiße Getränke',
-      'Kalte Getränke',
-      'Smoothies',
-      'Cocktails',
-      'Liköre & Sirup'
-    ],
-
-    // Saucen
-    'Saucen & Condiments 🥫': [
-      'Basis-Saucen',
-      'Grillsaucen',
-      'Pesto',
-      'Salsa',
-      'Chutneys'
-    ]
+    '🥗 Vorspeisen': ['Suppen', 'Salate', 'Fingerfood', 'Dips'],
+    '🍖 Hauptgerichte': ['Fleisch', 'Fisch', 'Vegetarisch', 'Vegan', 'Pasta', 'Pizza'],
+    '🥔 Beilagen': ['Kartoffeln', 'Gemüse', 'Reis', 'Salate'],
+    '🎂 Kuchen': ['Blechkuchen', 'Torten', 'Obstkuchen', 'Käsekuchen'],
+    '🥐 Gebäck': ['Kekse', 'Muffins', 'Croissants', 'Donuts'],
+    '🍞 Brot': ['Weißbrot', 'Vollkorn', 'Brötchen', 'Baguette'],
+    '🍨 Desserts': ['Eis', 'Cremes', 'Pudding', 'Tiramisu'],
+    '🍳 Frühstück': ['Müsli', 'Pancakes', 'Waffeln', 'Eiergerichte']
   });
 
   // Flatten categories for backward compatibility (stores as "Main > Sub")
@@ -259,6 +75,8 @@ const RecipeApp = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<'title' | 'date' | 'rating' | 'time'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [homeActiveTab, setHomeActiveTab] = useState<'all' | 'favorites'>('all');
+  const [quickTimeFilter, setQuickTimeFilter] = useState<'all' | 'quick' | 'medium'>('all');
   const [isListening, setIsListening] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
@@ -979,14 +797,16 @@ const RecipeApp = () => {
 
   // Improved filtering and sorting with utility functions and memoization
   const filteredRecipes = useMemo(() => {
+    const effectiveMaxTime = quickTimeFilter === 'quick' ? '30' : quickTimeFilter === 'medium' ? '60' : filters.maxTime;
+    const effectiveFavorite = homeActiveTab === 'favorites' ? true : filters.favorite;
     const filtered = searchRecipes(recipes, searchTerm, {
       category: filters.category,
-      maxTime: filters.maxTime,
+      maxTime: effectiveMaxTime,
       difficulty: filters.difficulty,
-      favorite: filters.favorite
+      favorite: effectiveFavorite
     });
     return sortRecipes(filtered, sortBy, sortOrder);
-  }, [recipes, searchTerm, filters, sortBy, sortOrder]);
+  }, [recipes, searchTerm, filters, sortBy, sortOrder, quickTimeFilter, homeActiveTab]);
 
   // Home view: function so it's evaluated at render time (BottomNav in scope) and returns JSX, not a component — search input keeps focus
   const getHomeViewContent = () => (
@@ -1044,8 +864,72 @@ const RecipeApp = () => {
               placeholder="Rezepte durchsuchen..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 rounded-2xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-base sm:text-lg min-h-[48px]"
+              className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 rounded-2xl border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none text-base sm:text-lg min-h-[48px] dark:bg-gray-800 dark:text-gray-100"
             />
+          </div>
+
+          {/* Tabs: Alle Rezepte / Favoriten (IMPROVEMENTS_SPEC 3.1) */}
+          <div className="flex gap-2 mb-3">
+            <button
+              type="button"
+              onClick={() => setHomeActiveTab('all')}
+              className={`flex-1 py-2.5 rounded-xl font-medium transition min-h-[44px] ${
+                homeActiveTab === 'all'
+                  ? 'bg-orange-500 text-white dark:bg-orange-600'
+                  : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              Alle Rezepte
+            </button>
+            <button
+              type="button"
+              onClick={() => setHomeActiveTab('favorites')}
+              className={`flex-1 py-2.5 rounded-xl font-medium flex items-center justify-center gap-2 transition min-h-[44px] ${
+                homeActiveTab === 'favorites'
+                  ? 'bg-orange-500 text-white dark:bg-orange-600'
+                  : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              <Star className={`w-4 h-4 ${homeActiveTab === 'favorites' ? 'fill-current' : ''}`} />
+              Favoriten
+            </button>
+          </div>
+
+          {/* Quick-Filter Zeit (IMPROVEMENTS_SPEC 3.2) */}
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-3 no-scrollbar">
+            <button
+              type="button"
+              onClick={() => setQuickTimeFilter('all')}
+              className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition min-h-[40px] ${
+                quickTimeFilter === 'all'
+                  ? 'bg-orange-500 text-white dark:bg-orange-600'
+                  : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+              }`}
+            >
+              Alle
+            </button>
+            <button
+              type="button"
+              onClick={() => setQuickTimeFilter('quick')}
+              className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition min-h-[40px] ${
+                quickTimeFilter === 'quick'
+                  ? 'bg-orange-500 text-white dark:bg-orange-600'
+                  : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+              }`}
+            >
+              ⚡ Unter 30 Min
+            </button>
+            <button
+              type="button"
+              onClick={() => setQuickTimeFilter('medium')}
+              className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition min-h-[40px] ${
+                quickTimeFilter === 'medium'
+                  ? 'bg-orange-500 text-white dark:bg-orange-600'
+                  : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+              }`}
+            >
+              ⏱️ Bis 60 Min
+            </button>
           </div>
 
           <div className="flex gap-2 mb-3 sm:mb-4 flex-wrap">
@@ -1255,7 +1139,7 @@ const RecipeApp = () => {
             <p className="text-gray-400 text-sm sm:text-base">{recipes.length === 0 ? 'Füge dein erstes Rezept hinzu!' : 'Versuche andere Filter'}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+          <div className="recipe-grid grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             {filteredRecipes.map(recipe => (
               <div
                 key={recipe.id}
@@ -1297,22 +1181,32 @@ const RecipeApp = () => {
                     <Star className="w-5 h-5 sm:w-6 sm:h-6 fill-yellow-400 text-yellow-400" />
                   </div>
                 )}
-                {recipe.image && (
-                  <div className="h-40 sm:h-48 overflow-hidden bg-gray-100">
-                    <img src={recipe.image} alt={recipe.title} className="w-full h-full object-cover" />
-                  </div>
-                )}
+                {/* Bild: 16:9, feste Höhe, immer Container (IMPROVEMENTS_SPEC 1.2 A), lazy loading (4.1) */}
+                <div className="relative w-full aspect-[16/9] max-h-32 sm:max-h-36 bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                  {recipe.image || recipe.imageUrl ? (
+                    <img
+                      src={recipe.image || recipe.imageUrl}
+                      alt={recipe.title}
+                      loading="lazy"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500">
+                      <ChefHat className="w-10 h-10 sm:w-12 sm:h-12" />
+                    </div>
+                  )}
+                </div>
                 <div className="p-4 sm:p-5">
                   <h3 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100 mb-2 sm:mb-3 line-clamp-2">{recipe.title}</h3>
-                  <div className="flex gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 flex-wrap">
+                  <div className="flex gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-2 sm:mb-3 flex-wrap">
                     <div className="flex items-center gap-1">
                       <Users className="w-3 h-3 sm:w-4 sm:h-4" />
                       <span>{recipe.servings} Portionen</span>
                     </div>
-                    {recipe.time && (
+                    {(recipe.time || (recipe.prepTime !== undefined && recipe.cookTime !== undefined && (recipe.prepTime + recipe.cookTime) > 0)) && (
                       <div className="flex items-center gap-1">
                         <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-                        <span>{recipe.time} Min</span>
+                        <span>{recipe.time || (recipe.prepTime || 0) + (recipe.cookTime || 0)} Min</span>
                       </div>
                     )}
                     {recipe.difficulty && (
@@ -1378,15 +1272,30 @@ const RecipeApp = () => {
     const [showNotes, setShowNotes] = useState(false);
     const [editedNotes, setEditedNotes] = useState(selectedRecipe.notes || '');
 
+    const detailImage = selectedRecipe.image || selectedRecipe.imageUrl;
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 dark:from-gray-900 dark:to-gray-800 pb-24">
         <div className="max-w-3xl mx-auto">
-          {selectedRecipe.image && (
-            <div className="h-48 sm:h-64 overflow-hidden bg-gray-100">
-              <img src={selectedRecipe.image} alt={selectedRecipe.title} className="w-full h-full object-cover" />
+          {/* Hero-Bild mit Gradient und Titel (IMPROVEMENTS_SPEC 1.2 B), lazy (4.1) */}
+          <div className="relative w-full h-56 sm:h-64 -mt-4 -mx-4 sm:mx-0 sm:rounded-t-3xl overflow-hidden">
+            {detailImage ? (
+              <img
+                src={detailImage}
+                alt={selectedRecipe.title}
+                loading="lazy"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-orange-200 to-red-200 dark:from-orange-900/50 dark:to-red-900/50 flex items-center justify-center">
+                <ChefHat className="w-20 h-20 sm:w-24 sm:h-24 text-white opacity-50" />
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+            <div className="absolute bottom-4 left-4 right-4">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">{selectedRecipe.title}</h1>
             </div>
-          )}
-          
+          </div>
+
           <div className="p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4 gap-2">
               <button
@@ -1423,11 +1332,9 @@ const RecipeApp = () => {
                 </button>
                 <button
                   onClick={() => {
-                    console.log('Bearbeiten geklickt', selectedRecipe);
                     if (selectedRecipe) {
                       setEditingRecipe(selectedRecipe);
                       setView('edit');
-                      console.log('View auf edit gesetzt, editingRecipe:', selectedRecipe);
                     } else {
                       alert('Fehler: Rezept nicht gefunden');
                     }
@@ -1441,8 +1348,7 @@ const RecipeApp = () => {
               </div>
             </div>
 
-            <div className="flex justify-between items-start mb-4 gap-2">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 dark:text-gray-100 flex-1 pr-2">{selectedRecipe.title}</h1>
+            <div className="flex justify-end items-start mb-4 gap-2">
               <div className="flex gap-2 flex-shrink-0">
                 <button
                   onClick={() => toggleFavorite(selectedRecipe.id)}
@@ -1802,6 +1708,7 @@ const RecipeApp = () => {
     const [recipeDate, setRecipeDate] = useState(new Date().toISOString().split('T')[0]);
     const [quickIngredientInput, setQuickIngredientInput] = useState('');
     const [newTagInput, setNewTagInput] = useState('');
+    const [showVoiceInput, setShowVoiceInput] = useState(false);
 
     // Aktualisiere States wenn editingRecipe sich ändert
     useEffect(() => {
@@ -1820,9 +1727,21 @@ const RecipeApp = () => {
         const existingCategory = editingRecipe.category || '';
         // Parse existing category (format: "Main > Sub" or just "Sub")
         if (existingCategory.includes(' > ')) {
-          const [main, sub] = existingCategory.split(' > ');
-          setMainCategory(main);
-          setSubCategory(sub);
+          const [mainOld, sub] = existingCategory.split(' > ');
+          // Zu neuer Struktur zuordnen: Hauptkategorie finden, die diese Unterkategorie hat
+          let matched = false;
+          for (const [main, subs] of Object.entries(categoryStructure)) {
+            if (subs.includes(sub)) {
+              setMainCategory(main);
+              setSubCategory(sub);
+              matched = true;
+              break;
+            }
+          }
+          if (!matched) {
+            setMainCategory(mainOld);
+            setSubCategory(sub);
+          }
         } else {
           // Try to find which main category this belongs to
           let found = false;
@@ -1955,7 +1874,7 @@ const RecipeApp = () => {
         id: isEditing ? editingRecipe.id : Date.now(),
         title: title.trim(),
         image,
-        servings: recipeServings,
+        servings: recipeServings || 1,
         prepTime,
         cookTime,
         time: totalTime > 0 ? totalTime.toString() : '', // backward compatibility
@@ -2008,7 +1927,7 @@ const RecipeApp = () => {
                 <span>Zurück</span>
               </button>
 
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-4 sm:mb-6">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 dark:text-gray-100 mb-4 sm:mb-6">
                 {isEditing ? `Bearbeiten: ${editingRecipe?.title || ''}` : 'Neues Rezept'}
               </h1>
               {isEditing && !editingRecipe && (
@@ -2016,61 +1935,133 @@ const RecipeApp = () => {
                   Fehler: Rezept-Daten konnten nicht geladen werden. Bitte versuche es erneut.
                 </div>
               )}
-            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
-              <label className="block text-sm font-bold text-gray-700 mb-2">Titel*</label>
+
+              {/* IMPROVEMENTS_SPEC 2.1: Rezept diktieren */}
+              {!isEditing && (
+                <div className="mb-4 sm:mb-6">
+                  {showVoiceInput ? (
+                    <VoiceRecipeInput
+                      onRecipeCreated={(recipe: VoiceRecipeData) => {
+                        setTitle(recipe.title);
+                        setRecipeServings(recipe.servings);
+                        setPrepTime(recipe.prepTime);
+                        setCookTime(recipe.cookTime);
+                        setIngredients(recipe.ingredients.length > 0 ? recipe.ingredients : [{ amount: '', unit: '', name: '' }]);
+                        setSteps(recipe.steps.length > 0 ? recipe.steps : ['']);
+                        setSelectedTags(recipe.tags || []);
+                        if (recipe.category) {
+                          let matched = false;
+                          for (const [main, subs] of Object.entries(categoryStructure)) {
+                            if (subs.includes(recipe.category!)) {
+                              setMainCategory(main);
+                              setSubCategory(recipe.category);
+                              matched = true;
+                              break;
+                            }
+                          }
+                          if (!matched) {
+                            setMainCategory('');
+                            setSubCategory(recipe.category);
+                          }
+                        }
+                        setShowVoiceInput(false);
+                      }}
+                      onClose={() => setShowVoiceInput(false)}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowVoiceInput(true)}
+                      className="flex items-center gap-2 px-4 py-3 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-200 rounded-xl font-medium hover:bg-purple-200 dark:hover:bg-purple-800/60 transition min-h-[48px] w-full sm:w-auto"
+                    >
+                      <Mic className="w-5 h-5" />
+                      <span>Mit Sprache eingeben</span>
+                    </button>
+                  )}
+                </div>
+              )}
+
+            <div className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
+              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Titel*</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="z.B. Spaghetti Carbonara"
-                className="w-full px-4 py-3 sm:py-4 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-base sm:text-lg min-h-[48px]"
+                className="w-full px-4 py-3 sm:py-4 rounded-xl border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none text-base sm:text-lg min-h-[48px] dark:bg-gray-800 dark:text-gray-100"
               />
             </div>
 
-            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
-              <label className="block text-sm font-bold text-gray-700 mb-2">
-                Rezeptfoto 📸
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="w-full px-4 py-3 sm:py-4 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none min-h-[48px] text-base"
-              />
-              {image && (
-                <img src={image} alt="Vorschau" className="mt-4 w-full h-48 object-cover rounded-xl" />
+            {/* Bildupload mit Vorschau (IMPROVEMENTS_SPEC 1.2 C) */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
+              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Rezeptfoto</label>
+              {image ? (
+                <div className="relative w-full h-48 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700">
+                  <img src={image} alt="Vorschau" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setImage('')}
+                    className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition min-w-[44px] min-h-[44px] flex items-center justify-center"
+                    title="Foto entfernen"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer hover:border-orange-400 dark:hover:border-orange-500 bg-gray-50 dark:bg-gray-700/50 transition">
+                  <Camera className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-2" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">Foto hinzufügen</span>
+                  <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                </label>
               )}
             </div>
 
-            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <label className="block text-sm font-bold text-gray-700 mb-2">Hauptkategorie</label>
-                <select
-                  value={mainCategory}
-                  onChange={(e) => {
-                    setMainCategory(e.target.value);
-                    setSubCategory(''); // Reset subcategory when main changes
-                  }}
-                  className="w-full px-4 py-3 sm:py-4 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-base sm:text-lg min-h-[48px]"
-                >
-                  <option value="">Keine Angabe</option>
-                  {Object.keys(categoryStructure).map((mainCat) => (
-                    <option key={mainCat} value={mainCat}>{mainCat}</option>
-                  ))}
-                </select>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
+              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Kategorie</label>
+              {/* Schritt 1: Hauptkategorie als Emoji-Buttons (max 3 Zeilen, flex-nowrap) */}
+              <div className="grid grid-cols-4 gap-2 mb-3 flex-nowrap">
+                {Object.keys(categoryStructure).map((mainCat) => {
+                  const emoji = mainCat.split(' ')[0] || mainCat;
+                  return (
+                    <button
+                      key={mainCat}
+                      type="button"
+                      onClick={() => {
+                        setMainCategory(mainCat);
+                        setSubCategory('');
+                      }}
+                      className={`aspect-square rounded-xl flex items-center justify-center text-2xl sm:text-3xl transition min-w-0 truncate ${
+                        mainCategory === mainCat
+                          ? 'bg-orange-500 text-white scale-105 ring-2 ring-orange-400'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                      title={mainCat}
+                    >
+                      {emoji}
+                    </button>
+                  );
+                })}
               </div>
-              {mainCategory && (
-                <div className="col-span-2">
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Unterkategorie</label>
+              {/* Schritt 2: Unterkategorie (nur wenn Hauptkategorie gewählt oder bestehende Kategorie) */}
+              {(mainCategory || subCategory) && (
+                <div className="mt-2">
+                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1">Unterkategorie</label>
                   <select
                     value={subCategory}
                     onChange={(e) => setSubCategory(e.target.value)}
-                    className="w-full px-4 py-3 sm:py-4 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-base sm:text-lg min-h-[48px]"
+                    className="w-full px-4 py-3 sm:py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none text-base dark:bg-gray-800 dark:text-gray-100 min-h-[44px]"
                   >
                     <option value="">Bitte wählen</option>
-                    {categoryStructure[mainCategory]?.map((subCat) => (
+                    {mainCategory && categoryStructure[mainCategory]?.map((subCat) => (
                       <option key={subCat} value={subCat}>{subCat}</option>
                     ))}
+                    {/* Bestehende/andere Kategorie anzeigen (z. B. von alten Rezepten) */}
+                    {subCategory && mainCategory && !(categoryStructure[mainCategory] || []).includes(subCategory) && (
+                      <option value={subCategory}>{subCategory}</option>
+                    )}
+                    {!mainCategory && subCategory && (
+                      <option value={subCategory}>{subCategory}</option>
+                    )}
                   </select>
                 </div>
               )}
@@ -2090,9 +2081,21 @@ const RecipeApp = () => {
                 <label className="block text-sm font-bold text-gray-700 mb-2">Portionen*</label>
                 <input
                   type="number"
-                  value={recipeServings}
-                  onChange={(e) => setRecipeServings(parseInt(e.target.value) || 1)}
-                  min="1"
+                  min={1}
+                  value={recipeServings === 0 ? '' : recipeServings}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === '') {
+                      setRecipeServings(0);
+                    } else {
+                      const n = parseInt(raw, 10);
+                      if (!isNaN(n)) setRecipeServings(Math.max(1, Math.min(999, n)));
+                    }
+                  }}
+                  onBlur={() => {
+                    if (recipeServings === 0) setRecipeServings(1);
+                  }}
+                  placeholder="z.B. 4"
                   className="w-full px-4 py-3 sm:py-4 rounded-xl border-2 border-gray-200 focus:border-orange-400 focus:outline-none text-base sm:text-lg min-h-[48px]"
                 />
               </div>
@@ -2402,10 +2405,10 @@ const RecipeApp = () => {
                   {title || 'Rezepttitel...'}
                 </h2>
                 <div className="flex gap-4 text-sm text-gray-600">
-                  {recipeServings && (
+                  {(recipeServings || 1) > 0 && (
                     <span className="flex items-center gap-1">
                       <Users className="w-4 h-4" />
-                      {recipeServings}
+                      {recipeServings || 1}
                     </span>
                   )}
                   {totalTime > 0 && (

@@ -126,3 +126,17 @@ button {
 .dark .bg-gray-50 {
   background-color: #1f2937;
 }
+
+/* IMPROVEMENTS_SPEC 4.2: Scrollbar ausblenden für Quick-Filter-Chips */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* IMPROVEMENTS_SPEC 4.2: Grid Performance */
+.recipe-grid {
+  contain: layout style paint;
+}
