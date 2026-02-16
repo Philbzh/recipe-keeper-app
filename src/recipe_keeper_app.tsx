@@ -59,20 +59,68 @@ const RecipeApp = () => {
     '🥫 Saucen': ['Basis-Saucen', 'Chutneys', 'Grillsaucen', 'Pesto', 'Salsa']
   };
 
+  // Gewünschte Reihenfolge der Hauptkategorien
+  const MAIN_CATEGORY_ORDER = [
+    '🍳 Frühstück',
+    '🥗 Vorspeisen',
+    '🍖 Hauptgerichte',
+    '🥔 Beilagen',
+    '🍨 Desserts',
+    '🎂 Feine Backwaren',
+    '🥐 Gebäck & Süßigkeiten',
+    '🍞 Backwaren',
+    '🌶️ Gewürze & Mischungen',
+    '🥫 Saucen'
+  ];
+
+  // Funktion: Sortiert categoryStructure nach der gewünschten Reihenfolge
+  const sortCategoryStructure = (structure: Record<string, string[]>): Record<string, string[]> => {
+    const sorted: Record<string, string[]> = {};
+    // Zuerst alle Kategorien in der gewünschten Reihenfolge hinzufügen
+    MAIN_CATEGORY_ORDER.forEach(mainCat => {
+      if (structure[mainCat]) {
+        sorted[mainCat] = Array.isArray(structure[mainCat])
+          ? [...structure[mainCat]].sort((a, b) => a.localeCompare(b, 'de'))
+          : [];
+      }
+    });
+    // Dann alle anderen Kategorien hinzufügen, die nicht in der Standard-Reihenfolge sind
+    Object.keys(structure).forEach(mainCat => {
+      if (!MAIN_CATEGORY_ORDER.includes(mainCat)) {
+        sorted[mainCat] = Array.isArray(structure[mainCat])
+          ? [...structure[mainCat]].sort((a, b) => a.localeCompare(b, 'de'))
+          : [];
+      }
+    });
+    return sorted;
+  };
+
+  // Funktion: Gibt die Hauptkategorien in der richtigen Reihenfolge zurück
+  const getOrderedMainCategories = (structure: Record<string, string[]>): string[] => {
+    const ordered: string[] = [];
+    // Zuerst alle Kategorien in der gewünschten Reihenfolge hinzufügen
+    MAIN_CATEGORY_ORDER.forEach(mainCat => {
+      if (structure[mainCat]) {
+        ordered.push(mainCat);
+      }
+    });
+    // Dann alle anderen Kategorien hinzufügen, die nicht in der Standard-Reihenfolge sind
+    Object.keys(structure).forEach(mainCat => {
+      if (!MAIN_CATEGORY_ORDER.includes(mainCat)) {
+        ordered.push(mainCat);
+      }
+    });
+    return ordered;
+  };
+
   const [categoryStructure, setCategoryStructure] = useState<Record<string, string[]>>(() => {
     try {
       const s = typeof window !== 'undefined' ? localStorage.getItem('category_structure') : null;
       if (s) {
         const parsed = JSON.parse(s);
         if (parsed && typeof parsed === 'object') {
-          // Sortiere alle Unterkategorien alphabetisch beim Laden
-          const sorted: Record<string, string[]> = {};
-          Object.keys(parsed).forEach(main => {
-            sorted[main] = Array.isArray(parsed[main]) 
-              ? [...parsed[main]].sort((a, b) => a.localeCompare(b, 'de'))
-              : [];
-          });
-          return sorted;
+          // Sortiere nach gewünschter Reihenfolge und Unterkategorien alphabetisch
+          return sortCategoryStructure(parsed);
         }
       }
     } catch (_) {}
@@ -82,7 +130,8 @@ const RecipeApp = () => {
   // Aus Struktur abgeleitete flache Liste (für Filter-Dropdown)
   const categories = useMemo(() => {
     const flat: string[] = [];
-    Object.entries(categoryStructure).forEach(([main, subs]) => {
+    getOrderedMainCategories(categoryStructure).forEach(main => {
+      const subs = categoryStructure[main] || [];
       subs.forEach(sub => flat.push(`${main} > ${sub}`));
     });
     return flat;
@@ -191,13 +240,7 @@ const RecipeApp = () => {
         if (data.recipes) setRecipes(data.recipes);
         if (data.shoppingList) setShoppingList(data.shoppingList);
         if (data.categoryStructure && Object.keys(data.categoryStructure).length > 0) {
-          const sorted: Record<string, string[]> = {};
-          Object.keys(data.categoryStructure).forEach(main => {
-            sorted[main] = Array.isArray(data.categoryStructure[main])
-              ? [...data.categoryStructure[main]].sort((a, b) => a.localeCompare(b, 'de'))
-              : [];
-          });
-          setCategoryStructure(sorted);
+          setCategoryStructure(sortCategoryStructure(data.categoryStructure));
         } else if (data.categories && Array.isArray(data.categories) && data.categories.length > 0) {
           const built: Record<string, string[]> = {};
           (data.categories as string[]).forEach((cat: string) => {
@@ -250,13 +293,7 @@ const RecipeApp = () => {
             const { data: structureRow } = await supabase.from('kv').select('value').eq('key', kvKey('category_structure')).single();
 
             if (structureRow?.value && typeof structureRow.value === 'object') {
-              const sorted: Record<string, string[]> = {};
-              Object.keys(structureRow.value).forEach(main => {
-                sorted[main] = Array.isArray(structureRow.value[main])
-                  ? [...structureRow.value[main]].sort((a, b) => a.localeCompare(b, 'de'))
-                  : [];
-              });
-              setCategoryStructure(sorted);
+              setCategoryStructure(sortCategoryStructure(structureRow.value));
             } else if (categoriesRow?.value && Array.isArray(categoriesRow.value) && categoriesRow.value.length > 0) {
               const built: Record<string, string[]> = {};
               categoriesRow.value.forEach((cat: string) => {
@@ -269,11 +306,7 @@ const RecipeApp = () => {
                 }
               });
               if (Object.keys(built).length > 0) {
-                const sorted: Record<string, string[]> = {};
-                Object.keys(built).forEach(main => {
-                  sorted[main] = [...built[main]].sort((a, b) => a.localeCompare(b, 'de'));
-                });
-                setCategoryStructure(sorted);
+                setCategoryStructure(sortCategoryStructure(built));
               }
             }
           } catch (err) {
@@ -292,13 +325,7 @@ const RecipeApp = () => {
           try {
             const parsed = JSON.parse(structureData);
             if (parsed && typeof parsed === 'object') {
-              const sorted: Record<string, string[]> = {};
-              Object.keys(parsed).forEach(main => {
-                sorted[main] = Array.isArray(parsed[main])
-                  ? [...parsed[main]].sort((a, b) => a.localeCompare(b, 'de'))
-                  : [];
-              });
-              setCategoryStructure(sorted);
+              setCategoryStructure(sortCategoryStructure(parsed));
             }
           } catch (_) {}
         } else if (categoriesData) {
@@ -316,11 +343,7 @@ const RecipeApp = () => {
                 }
               });
               if (Object.keys(built).length > 0) {
-                const sorted: Record<string, string[]> = {};
-                Object.keys(built).forEach(main => {
-                  sorted[main] = [...built[main]].sort((a, b) => a.localeCompare(b, 'de'));
-                });
-                setCategoryStructure(sorted);
+                setCategoryStructure(sortCategoryStructure(built));
               }
             }
           } catch (_) {}
@@ -409,20 +432,22 @@ const RecipeApp = () => {
   }, [dataService]);
 
   const saveCategoryStructure = useCallback(async (newStructure: Record<string, string[]>) => {
-    setCategoryStructure(newStructure);
+    const sorted = sortCategoryStructure(newStructure);
+    setCategoryStructure(sorted);
     const flat: string[] = [];
-    Object.entries(newStructure).forEach(([main, subs]) => {
+    getOrderedMainCategories(sorted).forEach(main => {
+      const subs = sorted[main] || [];
       subs.forEach(sub => flat.push(`${main} > ${sub}`));
     });
     if (dataService) {
-      await dataService.saveCategoryStructure(newStructure);
+      await dataService.saveCategoryStructure(sorted);
       await dataService.saveCategories(flat);
     } else {
       try {
-        localStorage.setItem('category_structure', JSON.stringify(newStructure));
+        localStorage.setItem('category_structure', JSON.stringify(sorted));
         localStorage.setItem('categories', JSON.stringify(flat));
         if (isSupabaseConfigured && supabase) {
-          await supabase.from('kv').upsert({ key: kvKey('category_structure'), value: newStructure });
+          await supabase.from('kv').upsert({ key: kvKey('category_structure'), value: sorted });
           await supabase.from('kv').upsert({ key: kvKey('categories'), value: flat });
         }
       } catch (error) {
@@ -589,7 +614,9 @@ const RecipeApp = () => {
         </div>
 
         <div className="space-y-4 max-h-96 overflow-y-auto">
-          {Object.entries(categoryStructure).map(([mainCat, subCats]) => (
+          {getOrderedMainCategories(categoryStructure).map((mainCat) => {
+            const subCats = categoryStructure[mainCat] || [];
+            return (
             <div key={mainCat} className="border-b border-gray-200 dark:border-gray-600 pb-3 last:border-0">
               {editingMain === mainCat ? (
                 <div className="flex gap-2 items-center mb-2">
@@ -645,7 +672,8 @@ const RecipeApp = () => {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );
@@ -2228,7 +2256,7 @@ const RecipeApp = () => {
               <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Kategorie</label>
               {/* Kompakte Pill-Buttons: Emoji + Name, nicht überdimensioniert */}
               <div className="flex flex-wrap gap-2 mb-3">
-                {Object.keys(categoryStructure).map((mainCat) => (
+                {getOrderedMainCategories(categoryStructure).map((mainCat) => (
                   <button
                     key={mainCat}
                     type="button"
