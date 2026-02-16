@@ -45,18 +45,18 @@ const RecipeApp = () => {
   const [recipes, setRecipes] = useState([]);
   const [shoppingList, setShoppingList] = useState([]);
   const [mealPlans, setMealPlans] = useState([]);
-  // Standard-Kategorien (wird überschrieben, wenn gespeicherte Struktur geladen wird)
+  // Standard-Kategorien in gewünschter Reihenfolge (Unterkategorien alphabetisch sortiert)
   const DEFAULT_CATEGORY_STRUCTURE: Record<string, string[]> = {
-    '🥗 Vorspeisen': ['Suppen', 'Salate', 'Fingerfood', 'Dips'],
-    '🍖 Hauptgerichte': ['Fleisch', 'Fisch', 'Vegetarisch', 'Vegan', 'Pasta', 'Pizza'],
-    '🥔 Beilagen': ['Kartoffeln', 'Gemüse', 'Reis', 'Salate'],
-    '🎂 Kuchen': ['Blechkuchen', 'Torten', 'Obstkuchen', 'Käsekuchen'],
-    '🥐 Gebäck': ['Kekse', 'Muffins', 'Croissants', 'Donuts'],
-    '🍞 Brot': ['Weißbrot', 'Vollkorn', 'Brötchen', 'Baguette'],
-    '🍨 Desserts': ['Eis', 'Cremes', 'Pudding', 'Tiramisu'],
-    '🍳 Frühstück': ['Müsli', 'Pancakes', 'Waffeln', 'Eiergerichte'],
-    '🌶️ Gewürze & Mischungen': ['Gewürzmischungen', 'BBQ-Rubs', 'Curry', 'Kräutermischungen', 'Salz & Zucker'],
-    '🥫 Saucen': ['Basis-Saucen', 'Grillsaucen', 'Pesto', 'Salsa', 'Chutneys']
+    '🍳 Frühstück': ['Eiergerichte', 'Müsli', 'Pancakes', 'Waffeln'],
+    '🥗 Vorspeisen': ['Dips', 'Fingerfood', 'Salate', 'Suppen'],
+    '🍖 Hauptgerichte': ['Fisch', 'Fleisch', 'Pasta', 'Pizza', 'Vegan', 'Vegetarisch'],
+    '🥔 Beilagen': ['Gemüse', 'Kartoffeln', 'Reis', 'Salate'],
+    '🍨 Desserts': ['Cremes', 'Eis', 'Pudding', 'Tiramisu'],
+    '🎂 Feine Backwaren': ['Blechkuchen', 'Käsekuchen', 'Obstkuchen', 'Torten'],
+    '🥐 Gebäck & Süßigkeiten': ['Croissants', 'Donuts', 'Kekse', 'Muffins', 'Süßigkeiten'],
+    '🍞 Backwaren': ['Baguette', 'Brötchen', 'Vollkorn', 'Weißbrot'],
+    '🌶️ Gewürze & Mischungen': ['BBQ-Rubs', 'Curry', 'Gewürzmischungen', 'Kräutermischungen', 'Salz & Zucker'],
+    '🥫 Saucen': ['Basis-Saucen', 'Chutneys', 'Grillsaucen', 'Pesto', 'Salsa']
   };
 
   const [categoryStructure, setCategoryStructure] = useState<Record<string, string[]>>(() => {
@@ -64,7 +64,16 @@ const RecipeApp = () => {
       const s = typeof window !== 'undefined' ? localStorage.getItem('category_structure') : null;
       if (s) {
         const parsed = JSON.parse(s);
-        if (parsed && typeof parsed === 'object') return parsed;
+        if (parsed && typeof parsed === 'object') {
+          // Sortiere alle Unterkategorien alphabetisch beim Laden
+          const sorted: Record<string, string[]> = {};
+          Object.keys(parsed).forEach(main => {
+            sorted[main] = Array.isArray(parsed[main]) 
+              ? [...parsed[main]].sort((a, b) => a.localeCompare(b, 'de'))
+              : [];
+          });
+          return sorted;
+        }
       }
     } catch (_) {}
     return { ...DEFAULT_CATEGORY_STRUCTURE };
@@ -182,7 +191,13 @@ const RecipeApp = () => {
         if (data.recipes) setRecipes(data.recipes);
         if (data.shoppingList) setShoppingList(data.shoppingList);
         if (data.categoryStructure && Object.keys(data.categoryStructure).length > 0) {
-          setCategoryStructure(data.categoryStructure);
+          const sorted: Record<string, string[]> = {};
+          Object.keys(data.categoryStructure).forEach(main => {
+            sorted[main] = Array.isArray(data.categoryStructure[main])
+              ? [...data.categoryStructure[main]].sort((a, b) => a.localeCompare(b, 'de'))
+              : [];
+          });
+          setCategoryStructure(sorted);
         } else if (data.categories && Array.isArray(data.categories) && data.categories.length > 0) {
           const built: Record<string, string[]> = {};
           (data.categories as string[]).forEach((cat: string) => {
@@ -194,7 +209,13 @@ const RecipeApp = () => {
               }
             }
           });
-          if (Object.keys(built).length > 0) setCategoryStructure(built);
+          if (Object.keys(built).length > 0) {
+            const sorted: Record<string, string[]> = {};
+            Object.keys(built).forEach(main => {
+              sorted[main] = [...built[main]].sort((a, b) => a.localeCompare(b, 'de'));
+            });
+            setCategoryStructure(sorted);
+          }
         }
         if (data.mealPlans) setMealPlans(data.mealPlans);
       } else {
@@ -229,7 +250,13 @@ const RecipeApp = () => {
             const { data: structureRow } = await supabase.from('kv').select('value').eq('key', kvKey('category_structure')).single();
 
             if (structureRow?.value && typeof structureRow.value === 'object') {
-              setCategoryStructure(structureRow.value);
+              const sorted: Record<string, string[]> = {};
+              Object.keys(structureRow.value).forEach(main => {
+                sorted[main] = Array.isArray(structureRow.value[main])
+                  ? [...structureRow.value[main]].sort((a, b) => a.localeCompare(b, 'de'))
+                  : [];
+              });
+              setCategoryStructure(sorted);
             } else if (categoriesRow?.value && Array.isArray(categoriesRow.value) && categoriesRow.value.length > 0) {
               const built: Record<string, string[]> = {};
               categoriesRow.value.forEach((cat: string) => {
@@ -241,7 +268,13 @@ const RecipeApp = () => {
                   }
                 }
               });
-              if (Object.keys(built).length > 0) setCategoryStructure(built);
+              if (Object.keys(built).length > 0) {
+                const sorted: Record<string, string[]> = {};
+                Object.keys(built).forEach(main => {
+                  sorted[main] = [...built[main]].sort((a, b) => a.localeCompare(b, 'de'));
+                });
+                setCategoryStructure(sorted);
+              }
             }
           } catch (err) {
             console.log('Supabase load failed, falling back to localStorage', err);
@@ -258,7 +291,15 @@ const RecipeApp = () => {
         if (structureData) {
           try {
             const parsed = JSON.parse(structureData);
-            if (parsed && typeof parsed === 'object') setCategoryStructure(parsed);
+            if (parsed && typeof parsed === 'object') {
+              const sorted: Record<string, string[]> = {};
+              Object.keys(parsed).forEach(main => {
+                sorted[main] = Array.isArray(parsed[main])
+                  ? [...parsed[main]].sort((a, b) => a.localeCompare(b, 'de'))
+                  : [];
+              });
+              setCategoryStructure(sorted);
+            }
           } catch (_) {}
         } else if (categoriesData) {
           try {
@@ -274,7 +315,13 @@ const RecipeApp = () => {
                   }
                 }
               });
-              if (Object.keys(built).length > 0) setCategoryStructure(built);
+              if (Object.keys(built).length > 0) {
+                const sorted: Record<string, string[]> = {};
+                Object.keys(built).forEach(main => {
+                  sorted[main] = [...built[main]].sort((a, b) => a.localeCompare(b, 'de'));
+                });
+                setCategoryStructure(sorted);
+              }
             }
           } catch (_) {}
         }
@@ -497,7 +544,8 @@ const RecipeApp = () => {
       if (!name) return;
       const subs = categoryStructure[mainName] || [];
       if (subs.includes(name)) return;
-      applySave({ ...categoryStructure, [mainName]: [...subs, name] });
+      const updated = [...subs, name].sort((a, b) => a.localeCompare(b, 'de'));
+      applySave({ ...categoryStructure, [mainName]: updated });
       setNewSubByMain({ ...newSubByMain, [mainName]: '' });
     };
 
@@ -507,7 +555,7 @@ const RecipeApp = () => {
         setEditingSub(null);
         return;
       }
-      const subs = (categoryStructure[mainName] || []).map(s => s === oldSub ? newName : s);
+      const subs = (categoryStructure[mainName] || []).map(s => s === oldSub ? newName : s).sort((a, b) => a.localeCompare(b, 'de'));
       applySave({ ...categoryStructure, [mainName]: subs });
       setEditingSub(null);
     };
@@ -563,7 +611,7 @@ const RecipeApp = () => {
                 </div>
               )}
               <div className="pl-2 space-y-1">
-                {(subCats || []).map((subCat) => (
+                {(subCats || []).slice().sort((a, b) => a.localeCompare(b, 'de')).map((subCat) => (
                   editingSub?.main === mainCat && editingSub?.sub === subCat ? (
                     <div key={subCat} className="flex gap-2 items-center py-1">
                       <input
@@ -2209,7 +2257,7 @@ const RecipeApp = () => {
                     className="w-full px-4 py-3 sm:py-3 rounded-xl border-2 border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:outline-none text-base dark:bg-gray-800 dark:text-gray-100 min-h-[44px]"
                   >
                     <option value="">Bitte wählen</option>
-                    {mainCategory && categoryStructure[mainCategory]?.map((subCat) => (
+                    {mainCategory && (categoryStructure[mainCategory] || []).slice().sort((a, b) => a.localeCompare(b, 'de')).map((subCat) => (
                       <option key={subCat} value={subCat}>{subCat}</option>
                     ))}
                     {/* Bestehende/andere Kategorie anzeigen (z. B. von alten Rezepten) */}
