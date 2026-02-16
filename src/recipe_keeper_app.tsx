@@ -41,6 +41,60 @@ const SUGGESTED_TAGS = [
   '🥗 Gesund', '💪 Low Carb', '🎉 Party-geeignet', '👶 Kinderfreundlich', '🍳 Meal Prep'
 ];
 
+// Gewünschte Reihenfolge der Hauptkategorien
+const MAIN_CATEGORY_ORDER = [
+  '🍳 Frühstück',
+  '🥗 Vorspeisen',
+  '🍖 Hauptgerichte',
+  '🥔 Beilagen',
+  '🍨 Desserts',
+  '🎂 Feine Backwaren',
+  '🥐 Gebäck & Süßigkeiten',
+  '🍞 Backwaren',
+  '🌶️ Gewürze & Mischungen',
+  '🥫 Saucen'
+];
+
+// Funktion: Sortiert categoryStructure nach der gewünschten Reihenfolge
+const sortCategoryStructure = (structure: Record<string, string[]>): Record<string, string[]> => {
+  const sorted: Record<string, string[]> = {};
+  // Zuerst alle Kategorien in der gewünschten Reihenfolge hinzufügen
+  MAIN_CATEGORY_ORDER.forEach(mainCat => {
+    if (structure[mainCat]) {
+      sorted[mainCat] = Array.isArray(structure[mainCat])
+        ? [...structure[mainCat]].sort((a, b) => a.localeCompare(b, 'de'))
+        : [];
+    }
+  });
+  // Dann alle anderen Kategorien hinzufügen, die nicht in der Standard-Reihenfolge sind
+  Object.keys(structure).forEach(mainCat => {
+    if (!MAIN_CATEGORY_ORDER.includes(mainCat)) {
+      sorted[mainCat] = Array.isArray(structure[mainCat])
+        ? [...structure[mainCat]].sort((a, b) => a.localeCompare(b, 'de'))
+        : [];
+    }
+  });
+  return sorted;
+};
+
+// Funktion: Gibt die Hauptkategorien in der richtigen Reihenfolge zurück
+const getOrderedMainCategories = (structure: Record<string, string[]>): string[] => {
+  const ordered: string[] = [];
+  // Zuerst alle Kategorien in der gewünschten Reihenfolge hinzufügen
+  MAIN_CATEGORY_ORDER.forEach(mainCat => {
+    if (structure[mainCat]) {
+      ordered.push(mainCat);
+    }
+  });
+  // Dann alle anderen Kategorien hinzufügen, die nicht in der Standard-Reihenfolge sind
+  Object.keys(structure).forEach(mainCat => {
+    if (!MAIN_CATEGORY_ORDER.includes(mainCat)) {
+      ordered.push(mainCat);
+    }
+  });
+  return ordered;
+};
+
 const RecipeApp = () => {
   const [recipes, setRecipes] = useState([]);
   const [shoppingList, setShoppingList] = useState([]);
@@ -59,72 +113,26 @@ const RecipeApp = () => {
     '🥫 Saucen': ['Basis-Saucen', 'Chutneys', 'Grillsaucen', 'Pesto', 'Salsa']
   };
 
-  // Gewünschte Reihenfolge der Hauptkategorien
-  const MAIN_CATEGORY_ORDER = [
-    '🍳 Frühstück',
-    '🥗 Vorspeisen',
-    '🍖 Hauptgerichte',
-    '🥔 Beilagen',
-    '🍨 Desserts',
-    '🎂 Feine Backwaren',
-    '🥐 Gebäck & Süßigkeiten',
-    '🍞 Backwaren',
-    '🌶️ Gewürze & Mischungen',
-    '🥫 Saucen'
-  ];
-
-  // Funktion: Sortiert categoryStructure nach der gewünschten Reihenfolge
-  const sortCategoryStructure = (structure: Record<string, string[]>): Record<string, string[]> => {
-    const sorted: Record<string, string[]> = {};
-    // Zuerst alle Kategorien in der gewünschten Reihenfolge hinzufügen
-    MAIN_CATEGORY_ORDER.forEach(mainCat => {
-      if (structure[mainCat]) {
-        sorted[mainCat] = Array.isArray(structure[mainCat])
-          ? [...structure[mainCat]].sort((a, b) => a.localeCompare(b, 'de'))
-          : [];
-      }
-    });
-    // Dann alle anderen Kategorien hinzufügen, die nicht in der Standard-Reihenfolge sind
-    Object.keys(structure).forEach(mainCat => {
-      if (!MAIN_CATEGORY_ORDER.includes(mainCat)) {
-        sorted[mainCat] = Array.isArray(structure[mainCat])
-          ? [...structure[mainCat]].sort((a, b) => a.localeCompare(b, 'de'))
-          : [];
-      }
-    });
-    return sorted;
-  };
-
-  // Funktion: Gibt die Hauptkategorien in der richtigen Reihenfolge zurück
-  const getOrderedMainCategories = (structure: Record<string, string[]>): string[] => {
-    const ordered: string[] = [];
-    // Zuerst alle Kategorien in der gewünschten Reihenfolge hinzufügen
-    MAIN_CATEGORY_ORDER.forEach(mainCat => {
-      if (structure[mainCat]) {
-        ordered.push(mainCat);
-      }
-    });
-    // Dann alle anderen Kategorien hinzufügen, die nicht in der Standard-Reihenfolge sind
-    Object.keys(structure).forEach(mainCat => {
-      if (!MAIN_CATEGORY_ORDER.includes(mainCat)) {
-        ordered.push(mainCat);
-      }
-    });
-    return ordered;
-  };
-
   const [categoryStructure, setCategoryStructure] = useState<Record<string, string[]>>(() => {
     try {
       const s = typeof window !== 'undefined' ? localStorage.getItem('category_structure') : null;
       if (s) {
         const parsed = JSON.parse(s);
-        if (parsed && typeof parsed === 'object') {
+        if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
           // Sortiere nach gewünschter Reihenfolge und Unterkategorien alphabetisch
-          return sortCategoryStructure(parsed);
+          const sorted = sortCategoryStructure(parsed);
+          console.log('Kategorien aus localStorage geladen und sortiert:', {
+            original: Object.keys(parsed),
+            sorted: Object.keys(sorted)
+          });
+          return sorted;
         }
       }
-    } catch (_) {}
-    return { ...DEFAULT_CATEGORY_STRUCTURE };
+    } catch (e) {
+      console.error('Fehler beim Laden der Kategorien aus localStorage:', e);
+    }
+    // Auch DEFAULT_CATEGORY_STRUCTURE sortieren, falls nötig
+    return sortCategoryStructure({ ...DEFAULT_CATEGORY_STRUCTURE });
   });
 
   // Aus Struktur abgeleitete flache Liste (für Filter-Dropdown)
@@ -229,6 +237,29 @@ const RecipeApp = () => {
     console.log('Aktuelle View:', view);
     console.log('editingRecipe:', editingRecipe);
   }, [view, editingRecipe]);
+
+  // Stelle sicher, dass categoryStructure beim ersten Laden sortiert ist
+  useEffect(() => {
+    if (!loading && Object.keys(categoryStructure).length > 0) {
+      const sorted = sortCategoryStructure(categoryStructure);
+      const currentKeys = Object.keys(categoryStructure);
+      const sortedKeys = Object.keys(sorted);
+      
+      // Prüfe, ob die Reihenfolge unterschiedlich ist
+      if (currentKeys.length !== sortedKeys.length || 
+          currentKeys.some((key, idx) => key !== sortedKeys[idx])) {
+        console.log('Kategorien-Reihenfolge korrigieren beim ersten Laden...', {
+          current: currentKeys,
+          sorted: sortedKeys
+        });
+        // Verwende setTimeout, um sicherzustellen, dass dies nicht während des Renders passiert
+        setTimeout(() => {
+          setCategoryStructure(sorted);
+        }, 0);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
 
   const kvKey = (baseKey) => (user ? `user:${user.id}:${baseKey}` : baseKey);
 
