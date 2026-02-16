@@ -3,7 +3,7 @@ import { supabase, isSupabaseConfigured } from './supabaseClient';
 import Auth from './Auth';
 import RecipeDataService from './dataService';
 import { MealPlan, ShoppingCategory, ShoppingItem } from './types';
-import { searchRecipes, sortRecipes, generateId, mergeIngredients, groupByCategory, categorizeShoppingItem, parseIngredientInput } from './utils';
+import { searchRecipes, sortRecipes, generateId, mergeIngredients, groupByCategory, categorizeShoppingItem, parseIngredientInput, compressImage } from './utils';
 import VoiceRecipeInput from './VoiceRecipeInput';
 import type { VoiceRecipeData } from './VoiceRecipeInput';
 import { Plus, Search, ShoppingCart, ChefHat, Users, Clock, ArrowLeft, Trash2, Check, X, Star, Mic, SlidersHorizontal, Share2, Play, Edit2, Settings, Calendar, GripVertical, ScanLine, Copy, Download, Upload, Printer, Moon, Sun, Camera } from 'lucide-react';
@@ -321,9 +321,19 @@ const RecipeApp = () => {
             console.error('Supabase save error (recipes):', err);
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Fehler beim Speichern:', error);
-        setError('Fehler beim Speichern der Rezepte');
+        if (error?.name === 'QuotaExceededError' || error?.message?.includes('quota')) {
+          const message = 'localStorage ist voll! Bitte:\n' +
+            '1. Alte Rezepte löschen oder\n' +
+            '2. Bilder aus Rezepten entfernen (Bilder verbrauchen viel Speicher)\n' +
+            '3. Rezepte exportieren und dann löschen\n\n' +
+            'Oder melde dich an, um Daten in der Cloud zu speichern.';
+          alert(message);
+          setError('localStorage voll - bitte Rezepte/Bilder löschen oder Cloud-Sync aktivieren');
+        } else {
+          setError('Fehler beim Speichern der Rezepte');
+        }
       }
     }
   }, [dataService]);
@@ -1918,14 +1928,25 @@ const RecipeApp = () => {
       }
     }, [editingRecipe]);
 
-    const handleImageUpload = (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setImage(reader.result);
-        };
-        reader.readAsDataURL(file);
+    const handleImageUpload = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      // Prüfe Dateigröße vorher (warnen wenn > 5MB)
+      const fileSizeMB = file.size / 1024 / 1024;
+      if (fileSizeMB > 5) {
+        if (!confirm(`Das Bild ist sehr groß (${fileSizeMB.toFixed(1)} MB). Es wird automatisch komprimiert. Fortfahren?`)) {
+          return;
+        }
+      }
+
+      try {
+        // Komprimiere Bild (max 800x800px, JPEG Qualität 0.8)
+        const compressed = await compressImage(file, 800, 800, 0.8);
+        setImage(compressed);
+      } catch (error) {
+        console.error('Fehler beim Komprimieren:', error);
+        alert('Fehler beim Verarbeiten des Bildes. Bitte versuche ein kleineres Bild oder ein anderes Format.');
       }
     };
 

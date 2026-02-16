@@ -223,6 +223,63 @@ export const parseIngredient = (ingredient: string): { quantity: string; item: s
   };
 };
 
+// Komprimiere Bild für localStorage (verhindert Quota-Überschreitung)
+export const compressImage = (file: File, maxWidth: number = 800, maxHeight: number = 800, quality: number = 0.8): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Berechne neue Dimensionen (behalte Aspect Ratio)
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Canvas context nicht verfügbar'));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Konvertiere zu JPEG (kleiner als PNG) mit Qualität
+        const compressed = canvas.toDataURL('image/jpeg', quality);
+        
+        // Prüfe Größe (localStorage Limit ~5-10MB, sicher: max 500KB pro Bild)
+        const sizeKB = (compressed.length * 3) / 4 / 1024; // Base64 ist ~33% größer
+        if (sizeKB > 500) {
+          // Noch stärker komprimieren
+          const lowerQuality = Math.max(0.5, quality - 0.2);
+          const retry = canvas.toDataURL('image/jpeg', lowerQuality);
+          resolve(retry);
+        } else {
+          resolve(compressed);
+        }
+      };
+      img.onerror = () => reject(new Error('Bild konnte nicht geladen werden'));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error('Datei konnte nicht gelesen werden'));
+    reader.readAsDataURL(file);
+  });
+};
+
 // Parse ingredient input string into structured format (e.g., "200g Mehl" -> { amount: "200", unit: "g", name: "Mehl" })
 export const parseIngredientInput = (input: string): { amount: string; unit: string; name: string } => {
   const trimmed = input.trim();

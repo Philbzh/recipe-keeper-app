@@ -107,9 +107,21 @@ class RecipeDataService {
 
     // Save to localStorage immediately
     try {
-      localStorage.setItem(key, JSON.stringify(data));
-    } catch (error) {
-      this.handleError(`Speichern in localStorage (${key})`, error);
+      const json = JSON.stringify(data);
+      const sizeMB = new Blob([json]).size / 1024 / 1024;
+      
+      // Warnung wenn Daten sehr groß (> 4MB)
+      if (sizeMB > 4) {
+        console.warn(`Warnung: ${key} ist sehr groß (${sizeMB.toFixed(2)} MB). localStorage könnte voll werden.`);
+      }
+      
+      localStorage.setItem(key, json);
+    } catch (error: any) {
+      if (error?.name === 'QuotaExceededError' || error?.message?.includes('quota')) {
+        this.handleError(`localStorage voll (${key})`, new Error('localStorage-Quota überschritten. Bitte alte Daten löschen oder Cloud-Sync aktivieren.'));
+      } else {
+        this.handleError(`Speichern in localStorage (${key})`, error);
+      }
       return false;
     }
 
