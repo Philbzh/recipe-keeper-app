@@ -1048,12 +1048,23 @@ const RecipeApp = () => {
   const speakText = (text) => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
+      setIsSpeaking(false); // Reset vor dem Start
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'de-DE';
       utterance.rate = 0.9;
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
+      utterance.onstart = () => {
+        setIsSpeaking(true);
+        console.log('Vorlesen gestartet');
+      };
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        console.log('Vorlesen beendet');
+      };
+      utterance.onerror = (event) => {
+        setIsSpeaking(false);
+        console.error('Vorlesen Fehler:', event);
+      };
+      setIsSpeaking(true); // Sofort setzen, bevor speak() aufgerufen wird
       window.speechSynthesis.speak(utterance);
     }
   };
@@ -1062,6 +1073,7 @@ const RecipeApp = () => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
+      console.log('Vorlesen gestoppt');
     }
   };
 
@@ -1827,23 +1839,40 @@ const RecipeApp = () => {
                 >
                   ← Zurück
                 </button>
-                {isSpeaking ? (
+                <button
+                  onClick={() => {
+                    if (isSpeaking) {
+                      stopSpeaking();
+                    } else {
+                      speakText(`Schritt ${currentStepIndex + 1}: ${selectedRecipe.steps[currentStepIndex]}`);
+                    }
+                  }}
+                  className={`flex-1 py-3 sm:py-4 rounded-xl font-medium active:scale-95 transition flex items-center justify-center gap-2 text-base sm:text-lg min-h-[52px] ${
+                    isSpeaking 
+                      ? 'bg-red-500 text-white' 
+                      : 'bg-blue-500 text-white'
+                  }`}
+                >
+                  {isSpeaking ? (
+                    <>
+                      <X className="w-4 h-4" />
+                      Stoppen
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-4 h-4" />
+                      Vorlesen
+                    </>
+                  )}
+                </button>
+                {isSpeaking && (
                   <button
                     onClick={stopSpeaking}
-                    className="flex-1 py-3 sm:py-4 bg-red-500 text-white rounded-xl font-medium active:scale-95 transition flex items-center justify-center gap-2 text-base sm:text-lg min-h-[52px]"
+                    className="px-4 py-3 sm:py-4 bg-red-500 text-white rounded-xl font-medium active:scale-95 transition flex items-center justify-center gap-2 text-base sm:text-lg min-h-[52px]"
+                    title="Vorlesen stoppen"
                   >
                     <X className="w-4 h-4" />
-                    Stoppen
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => {
-                      speakText(`Schritt ${currentStepIndex + 1}: ${selectedRecipe.steps[currentStepIndex]}`);
-                    }}
-                    className="flex-1 py-3 sm:py-4 bg-blue-500 text-white rounded-xl font-medium active:scale-95 transition flex items-center justify-center gap-2 text-base sm:text-lg min-h-[52px]"
-                  >
-                    <Mic className="w-4 h-4" />
-                    Vorlesen
+                    <span className="hidden sm:inline">Stoppen</span>
                   </button>
                 )}
                 <button
@@ -1952,23 +1981,40 @@ const RecipeApp = () => {
               >
                 ← Zurück
               </button>
-              {isSpeaking ? (
+              <button
+                onClick={() => {
+                  if (isSpeaking) {
+                    stopSpeaking();
+                  } else {
+                    speakText(`Schritt ${currentStepIndex + 1}: ${selectedRecipe.steps[currentStepIndex]}`);
+                  }
+                }}
+                className={`px-6 py-4 sm:py-5 rounded-2xl font-bold active:scale-95 transition min-h-[52px] flex items-center justify-center gap-2 ${
+                  isSpeaking 
+                    ? 'bg-red-500 text-white' 
+                    : 'bg-blue-500 text-white'
+                }`}
+              >
+                {isSpeaking ? (
+                  <>
+                    <X className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <span className="text-sm sm:text-base">Stoppen</span>
+                  </>
+                ) : (
+                  <>
+                    <Mic className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <span className="text-sm sm:text-base">Vorlesen</span>
+                  </>
+                )}
+              </button>
+              {isSpeaking && (
                 <button
                   onClick={stopSpeaking}
-                  className="px-6 py-4 sm:py-5 bg-red-500 text-white rounded-2xl font-bold active:scale-95 transition min-h-[52px] flex items-center justify-center gap-2"
+                  className="px-4 py-4 sm:py-5 bg-red-500 text-white rounded-2xl font-bold active:scale-95 transition min-h-[52px] flex items-center justify-center gap-2"
+                  title="Vorlesen stoppen"
                 >
                   <X className="w-5 h-5 sm:w-6 sm:h-6" />
-                  <span className="text-sm sm:text-base">Stoppen</span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    speakText(`Schritt ${currentStepIndex + 1}: ${selectedRecipe.steps[currentStepIndex]}`);
-                  }}
-                  className="px-6 py-4 sm:py-5 bg-blue-500 text-white rounded-2xl font-bold active:scale-95 transition min-h-[52px] flex items-center justify-center gap-2"
-                >
-                  <Mic className="w-5 h-5 sm:w-6 sm:h-6" />
-                  <span className="text-sm sm:text-base">Vorlesen</span>
+                  <span className="text-sm sm:text-base hidden sm:inline">Stoppen</span>
                 </button>
               )}
               <button
