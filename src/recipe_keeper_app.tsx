@@ -157,6 +157,7 @@ const RecipeApp = () => {
   const [homeActiveTab, setHomeActiveTab] = useState<'all' | 'favorites'>('all');
   const [quickTimeFilter, setQuickTimeFilter] = useState<'all' | 'quick' | 'medium'>('all');
   const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
@@ -237,6 +238,22 @@ const RecipeApp = () => {
     console.log('Aktuelle View:', view);
     console.log('editingRecipe:', editingRecipe);
   }, [view, editingRecipe]);
+
+  // Stoppe Vorlesen, wenn sich der Schritt ändert
+  useEffect(() => {
+    if (isSpeaking) {
+      stopSpeaking();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStepIndex]);
+
+  // Stoppe Vorlesen, wenn die Ansicht wechselt (außer cooking/detail)
+  useEffect(() => {
+    if (isSpeaking && view !== 'cooking' && view !== 'detail') {
+      stopSpeaking();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view]);
 
   // Stelle sicher, dass categoryStructure beim ersten Laden sortiert ist
   useEffect(() => {
@@ -1034,7 +1051,17 @@ const RecipeApp = () => {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'de-DE';
       utterance.rate = 0.9;
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
       window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const stopSpeaking = () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
     }
   };
 
@@ -1800,15 +1827,25 @@ const RecipeApp = () => {
                 >
                   ← Zurück
                 </button>
-                <button
-                  onClick={() => {
-                    speakText(`Schritt ${currentStepIndex + 1}: ${selectedRecipe.steps[currentStepIndex]}`);
-                  }}
-                  className="flex-1 py-3 sm:py-4 bg-blue-500 text-white rounded-xl font-medium active:scale-95 transition flex items-center justify-center gap-2 text-base sm:text-lg min-h-[52px]"
-                >
-                  <Mic className="w-4 h-4" />
-                  Vorlesen
-                </button>
+                {isSpeaking ? (
+                  <button
+                    onClick={stopSpeaking}
+                    className="flex-1 py-3 sm:py-4 bg-red-500 text-white rounded-xl font-medium active:scale-95 transition flex items-center justify-center gap-2 text-base sm:text-lg min-h-[52px]"
+                  >
+                    <X className="w-4 h-4" />
+                    Stoppen
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      speakText(`Schritt ${currentStepIndex + 1}: ${selectedRecipe.steps[currentStepIndex]}`);
+                    }}
+                    className="flex-1 py-3 sm:py-4 bg-blue-500 text-white rounded-xl font-medium active:scale-95 transition flex items-center justify-center gap-2 text-base sm:text-lg min-h-[52px]"
+                  >
+                    <Mic className="w-4 h-4" />
+                    Vorlesen
+                  </button>
+                )}
                 <button
                   onClick={() => setCurrentStepIndex(Math.min(selectedRecipe.steps.length - 1, currentStepIndex + 1))}
                   disabled={currentStepIndex === selectedRecipe.steps.length - 1}
@@ -1915,14 +1952,25 @@ const RecipeApp = () => {
               >
                 ← Zurück
               </button>
-              <button
-                onClick={() => {
-                  speakText(`Schritt ${currentStepIndex + 1}: ${selectedRecipe.steps[currentStepIndex]}`);
-                }}
-                className="px-6 py-4 sm:py-5 bg-blue-500 text-white rounded-2xl font-bold active:scale-95 transition min-h-[52px] flex items-center justify-center"
-              >
-                <Mic className="w-5 h-5 sm:w-6 sm:h-6" />
-              </button>
+              {isSpeaking ? (
+                <button
+                  onClick={stopSpeaking}
+                  className="px-6 py-4 sm:py-5 bg-red-500 text-white rounded-2xl font-bold active:scale-95 transition min-h-[52px] flex items-center justify-center gap-2"
+                >
+                  <X className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <span className="text-sm sm:text-base">Stoppen</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    speakText(`Schritt ${currentStepIndex + 1}: ${selectedRecipe.steps[currentStepIndex]}`);
+                  }}
+                  className="px-6 py-4 sm:py-5 bg-blue-500 text-white rounded-2xl font-bold active:scale-95 transition min-h-[52px] flex items-center justify-center gap-2"
+                >
+                  <Mic className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <span className="text-sm sm:text-base">Vorlesen</span>
+                </button>
+              )}
               <button
                 onClick={() => {
                   if (currentStepIndex < selectedRecipe.steps.length - 1) {
