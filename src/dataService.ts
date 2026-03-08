@@ -118,7 +118,10 @@ class RecipeDataService {
       localStorage.setItem(key, json);
     } catch (error: any) {
       if (error?.name === 'QuotaExceededError' || error?.message?.includes('quota')) {
-        this.handleError(`localStorage voll (${key})`, new Error('localStorage-Quota überschritten. Bitte alte Daten löschen oder Cloud-Sync aktivieren.'));
+        this.handleError(
+          `localStorage voll (${key})`,
+          new Error('Speicher voll. Rezept ohne Bild speichern, alte Rezepte/Bilder löschen oder Cloud-Sync aktivieren.')
+        );
       } else {
         this.handleError(`Speichern in localStorage (${key})`, error);
       }

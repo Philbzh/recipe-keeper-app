@@ -2198,15 +2198,14 @@ const RecipeApp = () => {
       }
     };
 
-    const saveRecipe = () => {
+    const saveRecipe = async () => {
       if (!title.trim() || ingredients.some(i => !i.name.trim()) || steps.some(s => !s.trim())) {
         alert('Bitte fülle alle Pflichtfelder aus!');
         return;
       }
 
-      // Combine main and sub category
-      const finalCategory = mainCategory && subCategory 
-        ? `${mainCategory} > ${subCategory}` 
+      const finalCategory = mainCategory && subCategory
+        ? `${mainCategory} > ${subCategory}`
         : subCategory || mainCategory || '';
 
       const totalTime = prepTime + cookTime;
@@ -2217,7 +2216,7 @@ const RecipeApp = () => {
         servings: recipeServings || 1,
         prepTime,
         cookTime,
-        time: totalTime > 0 ? totalTime.toString() : '', // backward compatibility
+        time: totalTime > 0 ? totalTime.toString() : '',
         category: finalCategory,
         difficulty,
         tags: selectedTags,
@@ -2237,12 +2236,31 @@ const RecipeApp = () => {
       } else {
         updated = [...recipes, recipeData];
       }
-      
-      saveRecipes(updated);
-      
+
+      let ok = await saveRecipes(updated);
+      let savedRecipe = recipeData;
+
+      if (!ok && image) {
+        const saveWithoutImage = window.confirm(
+          'Speicher voll (localStorage). Rezept ohne Bild speichern? Du kannst später Cloud-Sync nutzen oder Bilder aus anderen Rezepten entfernen.'
+        );
+        if (saveWithoutImage) {
+          const dataNoImage = { ...recipeData, image: '' };
+          const updatedNoImage = isEditing
+            ? recipes.map(r => r.id === editingRecipe.id ? dataNoImage : r)
+            : [...recipes, dataNoImage];
+          ok = await saveRecipes(updatedNoImage);
+          if (ok) {
+            setImage('');
+            savedRecipe = dataNoImage;
+          }
+        }
+      }
+
+      if (!ok) return;
+
       if (isEditing) {
-        // Aktualisiere selectedRecipe mit den neuen Daten
-        setSelectedRecipe(recipeData);
+        setSelectedRecipe(savedRecipe);
         setEditingRecipe(null);
         setView('detail');
       } else {
