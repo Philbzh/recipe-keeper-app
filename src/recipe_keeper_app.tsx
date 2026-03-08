@@ -422,37 +422,33 @@ const RecipeApp = () => {
     }
   };
 
-  // Improved save functions with DataService and optimistic updates
-  const saveRecipes = useCallback(async (newRecipes) => {
+  // Improved save functions with DataService and optimistic updates. Returns true if saved successfully.
+  const saveRecipes = useCallback(async (newRecipes): Promise<boolean> => {
     setRecipes(newRecipes); // Optimistic update
-    
+
     if (dataService) {
-      await dataService.saveRecipes(newRecipes);
-    } else {
-      // Fallback to original method
-      try {
-        localStorage.setItem('recipes', JSON.stringify(newRecipes));
-        if (isSupabaseConfigured && supabase) {
-          try {
-            await supabase.from('kv').upsert({ key: kvKey('recipes'), value: newRecipes });
-          } catch (err) {
-            console.error('Supabase save error (recipes):', err);
-          }
-        }
-      } catch (error: any) {
-        console.error('Fehler beim Speichern:', error);
-        if (error?.name === 'QuotaExceededError' || error?.message?.includes('quota')) {
-          const message = 'localStorage ist voll! Bitte:\n' +
-            '1. Alte Rezepte löschen oder\n' +
-            '2. Bilder aus Rezepten entfernen (Bilder verbrauchen viel Speicher)\n' +
-            '3. Rezepte exportieren und dann löschen\n\n' +
-            'Oder melde dich an, um Daten in der Cloud zu speichern.';
-          alert(message);
-          setError('localStorage voll - bitte Rezepte/Bilder löschen oder Cloud-Sync aktivieren');
-        } else {
-          setError('Fehler beim Speichern der Rezepte');
+      const ok = await dataService.saveRecipes(newRecipes);
+      if (!ok) return false;
+      return true;
+    }
+    try {
+      localStorage.setItem('recipes', JSON.stringify(newRecipes));
+      if (isSupabaseConfigured && supabase) {
+        try {
+          await supabase.from('kv').upsert({ key: kvKey('recipes'), value: newRecipes });
+        } catch (err) {
+          console.error('Supabase save error (recipes):', err);
         }
       }
+      return true;
+    } catch (error: any) {
+      console.error('Fehler beim Speichern:', error);
+      if (error?.name === 'QuotaExceededError' || error?.message?.includes('quota')) {
+        setError('localStorage voll - bitte Rezepte/Bilder löschen oder Cloud-Sync aktivieren');
+      } else {
+        setError('Fehler beim Speichern der Rezepte');
+      }
+      return false;
     }
   }, [dataService]);
 
@@ -2116,18 +2112,18 @@ const RecipeApp = () => {
       const file = e.target.files?.[0];
       if (!file) return;
 
-      // Prüfe Dateigröße vorher (warnen wenn > 5MB)
       const fileSizeMB = file.size / 1024 / 1024;
-      if (fileSizeMB > 5) {
-        if (!confirm(`Das Bild ist sehr groß (${fileSizeMB.toFixed(1)} MB). Es wird automatisch komprimiert. Fortfahren?`)) {
+      if (fileSizeMB > 3) {
+        if (!confirm(`Das Bild ist groß (${fileSizeMB.toFixed(1)} MB). Es wird stark komprimiert (~180 KB), um Speicher zu sparen. Fortfahren?`)) {
           return;
         }
       }
 
       try {
-        // Komprimiere Bild (max 800x800px, JPEG Qualität 0.8)
-        const compressed = await compressImage(file, 800, 800, 0.8);
+        // Starke Komprimierung: max 400x400, Qualität 0.6, Ziel max. 180 KB
+        const compressed = await compressImage(file, 400, 400, 0.6, 180);
         setImage(compressed);
+        e.target.value = '';
       } catch (error) {
         console.error('Fehler beim Komprimieren:', error);
         alert('Fehler beim Verarbeiten des Bildes. Bitte versuche ein kleineres Bild oder ein anderes Format.');

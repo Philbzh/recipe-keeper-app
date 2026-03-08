@@ -223,8 +223,24 @@ export const parseIngredient = (ingredient: string): { quantity: string; item: s
   };
 };
 
-// Komprimiere Bild für localStorage (verhindert Quota-Überschreitung)
-export const compressImage = (file: File, maxWidth: number = 800, maxHeight: number = 800, quality: number = 0.8): Promise<string> => {
+/** Größe einer Base64-Data-URL in KB (nur der Datenanteil). */
+function getBase64SizeKB(dataUrl: string): number {
+  const base64 = dataUrl.split(',')[1];
+  if (!base64) return 0;
+  return (base64.length * 3) / 4 / 1024;
+}
+
+/**
+ * Komprimiere Bild für localStorage (verhindert Quota-Überschreitung).
+ * Ziel: max. 180 KB pro Bild, damit viele Rezepte mit Bild möglich sind.
+ */
+export const compressImage = (
+  file: File,
+  maxWidth: number = 400,
+  maxHeight: number = 400,
+  quality: number = 0.65,
+  targetMaxKB: number = 180
+): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -233,22 +249,21 @@ export const compressImage = (file: File, maxWidth: number = 800, maxHeight: num
         const canvas = document.createElement('canvas');
         let width = img.width;
         let height = img.height;
+        let q = quality;
+        let w = Math.min(width, maxWidth);
+        let h = Math.min(height, maxHeight);
 
-        // Berechne neue Dimensionen (behalte Aspect Ratio)
         if (width > height) {
           if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
+            h = (height * maxWidth) / width;
+            w = maxWidth;
           }
         } else {
           if (height > maxHeight) {
-            width = (width * maxHeight) / height;
-            height = maxHeight;
+            w = (width * maxHeight) / height;
+            h = maxHeight;
           }
         }
-
-        canvas.width = width;
-        canvas.height = height;
 
         const ctx = canvas.getContext('2d');
         if (!ctx) {
@@ -256,21 +271,31 @@ export const compressImage = (file: File, maxWidth: number = 800, maxHeight: num
           return;
         }
 
-        ctx.drawImage(img, 0, 0, width, height);
+        const tryEncode = (qw: number, qh: number, qq: number): string => {
+          canvas.width = qw;
+          canvas.height = qh;
+          ctx.drawImage(img, 0, 0, qw, qh);
+          return canvas.toDataURL('image/jpeg', qq);
+        };
 
-        // Konvertiere zu JPEG (kleiner als PNG) mit Qualität
-        const compressed = canvas.toDataURL('image/jpeg', quality);
-        
-        // Prüfe Größe (localStorage Limit ~5-10MB, sicher: max 500KB pro Bild)
-        const sizeKB = (compressed.length * 3) / 4 / 1024; // Base64 ist ~33% größer
-        if (sizeKB > 500) {
-          // Noch stärker komprimieren
-          const lowerQuality = Math.max(0.5, quality - 0.2);
-          const retry = canvas.toDataURL('image/jpeg', lowerQuality);
-          resolve(retry);
-        } else {
-          resolve(compressed);
+        let result = tryEncode(w, h, q);
+        let sizeKB = getBase64SizeKB(result);
+
+        // Iterativ verkleinern, bis unter targetMaxKB
+        while (sizeKB > targetMaxKB && (w > 160 || h > 160 || q > 0.35)) {
+          if (q > 0.4) {
+            q = Math.max(0.35, q - 0.15);
+          } else if (w > 160 || h > 160) {
+            w = Math.max(160, Math.floor(w * 0.75));
+            h = Math.max(160, Math.floor(h * 0.75));
+          } else {
+            break;
+          }
+          result = tryEncode(w, h, q);
+          sizeKB = getBase64SizeKB(result);
         }
+
+        resolve(result);
       };
       img.onerror = () => reject(new Error('Bild konnte nicht geladen werden'));
       img.src = e.target?.result as string;
